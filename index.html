@@ -5,73 +5,609 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hogwarts — Il Torneo delle Quattro Casate</title>
 <style>
-:root{color-scheme:dark;--gold:#d8b56a;--ink:#11131b;--paper:#efe5c7;--muted:#c7c0ae;--panel:#171923;--line:#5f5236}
-*{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Georgia,'Times New Roman',serif;background:#080a10;color:var(--paper)}
-body{background:radial-gradient(circle at 50% 0%,#26314c 0,#101522 38%,#070910 78%)}
-#app{min-height:100vh;background:linear-gradient(180deg,rgba(7,9,16,.12),rgba(7,9,16,.78));overflow:hidden}
-header{padding:42px 22px 20px;text-align:center;position:relative}header:before,header:after{content:'✦';position:absolute;top:54px;color:var(--gold);opacity:.75;font-size:20px}header:before{left:10%}header:after{right:10%}
-.eyebrow{letter-spacing:.28em;text-transform:uppercase;font-size:12px;color:var(--gold);font-family:system-ui,sans-serif}.title{font-size:clamp(38px,7vw,74px);margin:10px 0 4px;letter-spacing:.03em;text-shadow:0 3px 22px #000}.subtitle{margin:0;color:var(--muted);font-style:italic;font-size:18px}
-.crest{width:126px;height:146px;margin:22px auto 8px;position:relative;filter:drop-shadow(0 8px 14px #0008)}.shield{width:100%;height:100%;border:3px solid var(--gold);border-radius:14px 14px 48px 48px;background:conic-gradient(from 45deg,#8b2026 0 25%,#b38b2d 0 50%,#315a8b 0 75%,#355d3e 0);clip-path:polygon(8% 3%,92% 3%,96% 67%,50% 100%,4% 67%);display:grid;place-items:center}.crestmark{font-size:48px;background:#0e1119dd;border:2px solid var(--gold);width:64px;height:64px;border-radius:50%;display:grid;place-items:center}
-main{max-width:1120px;margin:auto;padding:18px 20px 58px}.intro{max-width:760px;margin:0 auto 28px;text-align:center;color:#d8d1bf;line-height:1.65}.controls{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:22px 0 30px}.btn{border:1px solid var(--gold);background:#171923;color:var(--paper);padding:12px 18px;border-radius:999px;font:600 14px system-ui,sans-serif;cursor:pointer}.btn:hover{background:#262936}.btn.primary{background:var(--gold);color:#15120c}
-.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}.house{min-height:270px;border:1px solid var(--line);background:linear-gradient(145deg,#181b25,#0f1118);border-radius:16px;padding:22px 18px;position:relative;overflow:hidden;transition:.25s transform,.25s border-color}.house:hover{transform:translateY(-5px);border-color:var(--gold)}.house:after{content:'';position:absolute;width:160px;height:160px;border-radius:50%;right:-90px;bottom:-90px;background:currentColor;opacity:.07}.sigil{width:76px;height:76px;border-radius:50%;margin:auto;border:2px solid currentColor;display:grid;place-items:center;font-size:35px;background:#0a0c12}.house h2{text-align:center;margin:14px 0 4px;font-size:24px}.house p{text-align:center;color:#bcb6a8;line-height:1.5;margin:0;font-family:system-ui,sans-serif;font-size:14px}.points{text-align:center;font-family:system-ui,sans-serif;font-weight:800;color:var(--gold);margin-top:15px}.g{color:#b6424b}.t{color:#d0a83e}.r{color:#638bc0}.s{color:#5e9368}
-.card{margin-top:28px;border:1px solid var(--line);background:#12151ed9;border-radius:18px;padding:22px}.card h3{margin:0 0 12px;color:var(--gold);font-size:20px}.instructions{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;font-family:system-ui,sans-serif}.step{background:#191c26;border-radius:12px;padding:15px;color:#cbc5b6;line-height:1.5}.step b{color:#fff;display:block;margin-bottom:5px}
-.modal{position:fixed;inset:0;background:#000a;display:none;align-items:center;justify-content:center;padding:20px;z-index:5}.modal.open{display:flex}.dialog{max-width:560px;width:100%;background:#171923;border:1px solid var(--gold);border-radius:20px;padding:26px;box-shadow:0 20px 70px #000}.dialog h2{margin-top:0}.close{float:right;background:none;border:0;color:#aaa;font-size:26px;cursor:pointer}.student-list{display:flex;gap:8px;flex-wrap:wrap}.student{padding:8px 12px;border:1px solid #4a4650;border-radius:999px;font-family:system-ui,sans-serif;cursor:pointer}.student.selected{border-color:var(--gold);background:#3b3018;color:#ffe6a2}
-footer{text-align:center;color:#817b70;font:12px system-ui,sans-serif;padding:22px}
-@media(max-width:850px){.grid{grid-template-columns:repeat(2,1fr)}.instructions{grid-template-columns:1fr}}
-@media(max-width:520px){.grid{grid-template-columns:1fr}.crest{width:105px;height:122px}}
+:root {
+  color-scheme: dark;
+  --gold: #d8b56a;
+  --ink: #11131b;
+  --paper: #efe5c7;
+  --muted: #c7c0ae;
+  --panel: #171923;
+  --line: #5f5236;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  background: #080a10;
+  color: var(--paper);
+}
+body {
+  background: radial-gradient(circle at 50% 0%, #26314c 0, #101522 38%, #070910 78%);
+}
+#app {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(7,9,16,.12), rgba(7,9,16,.78));
+  overflow: hidden;
+}
+header {
+  padding: 42px 22px 20px;
+  text-align: center;
+  position: relative;
+}
+header:before, header:after {
+  content: '✦';
+  position: absolute;
+  top: 54px;
+  color: var(--gold);
+  opacity: .75;
+  font-size: 20px;
+}
+header:before { left: 10%; }
+header:after { right: 10%; }
+
+.eyebrow {
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--gold);
+  font-family: system-ui, sans-serif;
+}
+.title {
+  font-size: clamp(38px, 7vw, 74px);
+  margin: 10px 0 4px;
+  letter-spacing: .03em;
+  text-shadow: 0 3px 22px #000;
+}
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 18px;
+}
+.crest {
+  width: 126px;
+  height: 146px;
+  margin: 22px auto 8px;
+  position: relative;
+  filter: drop-shadow(0 8px 14px #0008);
+}
+.shield {
+  width: 100%;
+  height: 100%;
+  border: 3px solid var(--gold);
+  border-radius: 14px 14px 48px 48px;
+  background: conic-gradient(from 45deg, #8b2026 0 25%, #b38b2d 0 50%, #315a8b 0 75%, #355d3e 0);
+  clip-path: polygon(8% 3%, 92% 3%, 96% 67%, 50% 100%, 4% 67%);
+  display: grid;
+  place-items: center;
+}
+.crestmark {
+  font-size: 48px;
+  background: #0e1119dd;
+  border: 2px solid var(--gold);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+main {
+  max-width: 1120px;
+  margin: auto;
+  padding: 18px 20px 58px;
+}
+.intro {
+  max-width: 760px;
+  margin: 0 auto 28px;
+  text-align: center;
+  color: #d8d1bf;
+  line-height: 1.65;
+}
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 22px 0 30px;
+}
+.btn {
+  border: 1px solid var(--gold);
+  background: #171923;
+  color: var(--paper);
+  padding: 12px 18px;
+  border-radius: 999px;
+  font: 600 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.btn:hover { background: #262936; }
+.btn.primary { background: var(--gold); color: #15120c; }
+
+.authbox {
+  display: none;
+  max-width: 420px;
+  margin: 15px auto;
+  gap: 8px;
+}
+.authbox input, input, select {
+  padding: 11px;
+  border-radius: 8px;
+  background: #0f1118;
+  color: #efe5c7;
+  border: 1px solid #5f5236;
+}
+.authbox input { width: 100%; }
+.message {
+  text-align: center;
+  color: var(--gold);
+  font: 14px system-ui, sans-serif;
+  margin-top: 10px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.house {
+  min-height: 270px;
+  border: 1px solid var(--line);
+  background: linear-gradient(145deg, #181b25, #0f1118);
+  border-radius: 16px;
+  padding: 22px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: .25s transform, .25s border-color;
+}
+.house:hover {
+  transform: translateY(-5px);
+  border-color: var(--gold);
+}
+.house:after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  right: -90px;
+  bottom: -90px;
+  background: currentColor;
+  opacity: .07;
+}
+.sigil {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  margin: auto;
+  border: 2px solid currentColor;
+  display: grid;
+  place-items: center;
+  font-size: 35px;
+  background: #0a0c12;
+}
+.house h2 { text-align: center; margin: 14px 0 4px; font-size: 24px; }
+.house p { text-align: center; color: #bcb6a8; line-height: 1.5; margin: 0; font-family: system-ui, sans-serif; font-size: 14px; }
+.points { text-align: center; font-family: system-ui, sans-serif; font-weight: 800; color: var(--gold); margin-top: 15px; }
+
+.g { color: #b6424b; }
+.t { color: #d0a83e; }
+.r { color: #638bc0; }
+.s { color: #5e9368; }
+
+.card {
+  margin-top: 28px;
+  border: 1px solid var(--line);
+  background: #12151ed9;
+  border-radius: 18px;
+  padding: 22px;
+}
+.card h3 { margin: 0 0 12px; color: var(--gold); font-size: 20px; }
+
+.list { display: grid; gap: 8px; font-family: system-ui, sans-serif; }
+.row {
+  display: grid;
+  grid-template-columns: 1fr 160px 60px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #3f3b32;
+  border-radius: 10px;
+}
+
+.instructions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-family: system-ui, sans-serif;
+}
+.step {
+  background: #191c26;
+  border-radius: 12px;
+  padding: 15px;
+  color: #cbc5b6;
+  line-height: 1.5;
+}
+.step b { color: #fff; display: block; margin-bottom: 5px; }
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: #000a;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 5;
+}
+.modal.open { display: flex; }
+.dialog {
+  max-width: 560px;
+  width: 100%;
+  background: #171923;
+  border: 1px solid var(--gold);
+  border-radius: 20px;
+  padding: 26px;
+  box-shadow: 0 20px 70px #000;
+}
+.dialog h2 { margin-top: 0; }
+.close {
+  float: right;
+  background: none;
+  border: 0;
+  color: #aaa;
+  font-size: 26px;
+  cursor: pointer;
+}
+
+footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; padding: 22px; }
+
+@media(max-width: 850px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .instructions { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 1fr; }
+}
+@media(max-width: 520px) {
+  .grid { grid-template-columns: 1fr; }
+  .crest { width: 105px; height: 122px; }
+}
 </style>
 </head>
 <body>
 <div id="app">
 <header>
-<div class="eyebrow">Anno scolastico · Liceo Scientifico Newton</div>
-<div class="crest"><div class="shield"><div class="crestmark">⚡</div></div></div>
-<h1 class="title">Hogwarts</h1><p class="subtitle">Il Torneo delle Quattro Casate</p>
+  <div class="eyebrow">Anno scolastico · Liceo Scientifico Newton</div>
+  <div class="crest"><div class="shield"><div class="crestmark">⚡</div></div></div>
+  <h1 class="title">Hogwarts</h1>
+  <p class="subtitle">Il Torneo delle Quattro Casate</p>
 </header>
 <main>
-<p class="intro">Benvenuti nella Sala Grande. Qui comincia la sfida: assegna gli studenti alle Casate, conquista punti e porta la tua squadra in cima alla classifica.</p>
-<section class="card" style="margin-top:0"><h3>Accesso</h3><p style="color:#c7c0ae;font-family:system-ui,sans-serif">Scegli l'interfaccia da utilizzare. L'interfaccia studente è in sola lettura.</p><div class="controls" style="margin:12px 0 0"><button class="btn primary" id="teacherMode">👨‍🏫 Area docente</button><button class="btn" id="studentMode">🎓 Area studente</button></div><div id="roleStatus" style="text-align:center;margin-top:12px;color:var(--gold);font-family:system-ui,sans-serif">Modalità docente</div></section>
-<div class="controls" id="teacherControls"><button class="btn primary" id="sortBtn">🎩 Cappello Parlante</button><button class="btn" id="manageBtn">👥 Gestisci studenti</button><button class="btn" id="pointsBtn">🏆 Gestisci punti</button><button class="btn" id="resetBtn">↺ Azzera</button></div>
-<nav class="card" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px" aria-label="Sezioni">
-<a class="btn" href="#houses" style="text-decoration:none">🦁 Le Casate</a><a class="btn" href="#ranking" style="text-decoration:none">🏆 Classifica</a><a class="btn" href="#instructions" style="text-decoration:none">📜 Regolamento</a>
-</nav>
-<section class="grid" id="houses">
-<article class="house g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
-<article class="house t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
-<article class="house r"><div class="sigil">🦅</div><h2>Corvonero</h2><p>Curiosità, ingegno e amore per la conoscenza.</p><div class="points" data-house="r">0 punti</div></article>
-<article class="house s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
-</section>
-<section class="card"><h3>Classifica delle Casate</h3><div id="ranking" style="display:grid;gap:8px;font-family:system-ui,sans-serif"></div></section>
-<section class="card" id="classCard" style="display:none"><h3>Gestione classe</h3><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px"><input id="studentName" placeholder="Nome e cognome" style="flex:1;min-width:220px;padding:11px;border-radius:10px;border:1px solid #5f5236;background:#0f1118;color:#efe5c7"><button class="btn primary" id="addStudent">＋ Aggiungi studente</button></div><div id="classList" style="display:grid;gap:8px;font-family:system-ui,sans-serif"></div></section>
-<section class="card" id="studentView" style="display:none"><h3>Area studente</h3><p style="color:#c7c0ae;font-family:system-ui,sans-serif">Qui puoi consultare la situazione del torneo. Non puoi modificare punti, assegnazioni o impostazioni.</p><div id="studentRanking" style="display:grid;gap:8px;font-family:system-ui,sans-serif"></div></section>
-<section class="card" id="pointsCard" style="display:none"><h3>Assegna punti tramite voto</h3><div style="display:grid;gap:12px;max-width:520px;margin:auto"><label style="font-family:system-ui,sans-serif">Studente<select id="pointsStudent" style="width:100%;margin-top:5px;padding:11px;border-radius:8px;background:#0f1118;color:#efe5c7;border:1px solid #5f5236"></select></label><label style="font-family:system-ui,sans-serif">Voto<input id="gradeInput" type="number" min="1" max="10" step="0.5" placeholder="es. 8,5" style="width:100%;margin-top:5px;padding:11px;border-radius:8px;background:#0f1118;color:#efe5c7;border:1px solid #5f5236"></label><div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div><button class="btn primary" id="saveGrade">✓ Registra voto e punti</button></div><div id="gradeHistory" style="margin-top:18px;display:grid;gap:8px;font-family:system-ui,sans-serif"></div></section>
-<section class="card" id="instructions"><h3>Come funziona</h3><div class="instructions"><div class="step"><b>1 · Cappello Parlante</b>Seleziona uno studente e assegnalo a una delle quattro Casate.</div><div class="step"><b>2 · Classifica</b>Ogni assegnazione e ogni punto aggiornano automaticamente la situazione.</div><div class="step"><b>3 · Torneo</b>Durante l'anno puoi premiare o penalizzare le Casate con il pannello dei punti.</div></div></section>
-<footer>Pagina Hogwarts · prototipo interattivo per uso didattico</footer>
+  <p class="intro">Benvenuti nella Sala Grande. Le Casate conquistano punti e portano la propria squadra in cima alla classifica.</p>
+  
+  <!-- ACCESSO -->
+  <section class="card" style="margin-top:0">
+    <h3>Accesso</h3>
+    <p style="color:#c7c0ae;font-family:system-ui,sans-serif">L'area studente è disponibile in sola lettura. L'area docente richiede autenticazione.</p>
+    <div class="controls" style="margin:12px 0 0">
+      <button type="button" class="btn" id="teacherMode">👨‍🏫 Area docente</button>
+      <button type="button" class="btn primary" id="studentMode">🎓 Area studente</button>
+    </div>
+    <div id="roleStatus" class="message">Modalità studente — sola consultazione</div>
+    <div id="authBox" class="authbox">
+      <input id="email" type="email" placeholder="Email docente">
+      <input id="password" type="password" placeholder="Password">
+      <button type="button" class="btn primary" id="loginBtn">Accedi</button>
+      <div id="authMessage" class="message"></div>
+    </div>
+  </section>
+
+  <!-- CONTROLLI DOCENTE -->
+  <div class="controls" id="teacherControls" style="display:none">
+    <button type="button" class="btn primary" id="sortBtn">🎩 Cappello Parlante</button>
+    <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
+    <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
+    <button type="button" class="btn" id="resetBtn">↺ Azzera</button>
+    <button type="button" class="btn" id="logoutBtn">Esci</button>
+  </div>
+
+  <!-- MENU NAVIGAZIONE -->
+  <nav class="card" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px" aria-label="Sezioni">
+    <a class="btn" href="#houses" style="text-decoration:none">🦁 Le Casate</a>
+    <a class="btn" href="#ranking" style="text-decoration:none">🏆 Classifica</a>
+    <a class="btn" href="#instructions" style="text-decoration:none">📜 Regolamento</a>
+  </nav>
+
+  <!-- LE CASATE -->
+  <section class="grid" id="houses">
+    <article class="house g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
+    <article class="house t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
+    <article class="house r"><div class="sigil">🦅</div><h2>Corvonero</h2><p>Curiosità, ingegno e amore per la conoscenza.</p><div class="points" data-house="r">0 punti</div></article>
+    <article class="house s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
+  </section>
+
+  <!-- CLASSIFICA -->
+  <section class="card" id="ranking">
+    <h3>Classifica delle Casate</h3>
+    <div id="rankingList" class="list"></div>
+  </section>
+
+  <!-- GESTIONE CLASSE (DOCENTE) -->
+  <section class="card" id="classCard" style="display:none">
+    <h3>Gestione classe</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <input id="studentName" placeholder="Nome e cognome" style="flex:1;min-width:220px;">
+      <button type="button" class="btn primary" id="addStudent">＋ Aggiungi studente</button>
+    </div>
+    <div id="classList" class="list"></div>
+  </section>
+
+  <!-- ASSEGNA PUNTI -->
+  <section class="card" id="pointsCard" style="display:none">
+    <h3>Assegna punti tramite voto</h3>
+    <div style="display:grid;gap:12px;max-width:520px;margin:auto">
+      <label style="font-family:system-ui,sans-serif">Studente
+        <select id="pointsStudent" style="width:100%;margin-top:5px;"></select>
+      </label>
+      <label style="font-family:system-ui,sans-serif">Voto
+        <input id="gradeInput" type="number" min="1" max="10" step="0.5" placeholder="es. 8,5" style="width:100%;margin-top:5px;">
+      </label>
+      <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div>
+      <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
+    </div>
+    <div id="gradeHistory" class="list" style="margin-top:18px"></div>
+  </section>
+
+  <!-- REGOLAMENTO -->
+  <section class="card" id="instructions">
+    <h3>Come funziona</h3>
+    <div class="instructions">
+      <div class="step"><b>🎩 Cappello Parlante</b>Distribuisce casualmente gli studenti in modo equilibrato fra le quattro Casate.</div>
+      <div class="step"><b>🏆 Classifica</b>Il punteggio complessivo della Casata è dato dalla somma dei punti dei singoli studenti.</div>
+      <div class="step"><b>📈 Voti e Punti</b>Ogni voto inserito produce automaticamente <strong>voto − 6</strong> punti.</div>
+    </div>
+  </section>
+
+  <footer>Pagina Hogwarts · prototipo interattivo per uso didattico</footer>
 </main>
-<div class="modal" id="modal"><div class="dialog"><button class="close" id="close">×</button><h2>Il Cappello Parlante</h2><p style="color:#c7c0ae">Scegli uno studente per iniziare l'assegnazione.</p><div class="student-list" id="students"></div><div id="result" style="margin-top:20px;font-size:20px;color:var(--gold);text-align:center"></div></div></div>
+
+<!-- MODALE CAPPELLO PARLANTE -->
+<div class="modal" id="modal">
+  <div class="dialog">
+    <button type="button" class="close" id="close">×</button>
+    <h2>Il Cappello Parlante</h2>
+    <div id="result" style="margin-top:15px;font-family:system-ui,sans-serif"></div>
+  </div>
 </div>
+</div>
+
 <script>
-const names=['Studente 1','Studente 2','Studente 3','Studente 4','Studente 5','Studente 6'];
-const houses={g:'Grifondoro',t:'Tassorosso',r:'Corvonero',s:'Serpeverde'};let students=[...['Studente 1','Studente 2','Studente 3','Studente 4','Studente 5','Studente 6'].map((name,i)=>({id:i+1,name,house:null,points:0,history:[]}))];let points={g:0,t:0,r:0,s:0};
-const modal=document.getElementById('modal'),list=document.getElementById('students'),result=document.getElementById('result'),ranking=document.getElementById('ranking'),studentRanking=document.getElementById('studentRanking'),teacherControls=document.getElementById('teacherControls'),studentView=document.getElementById('studentView'),roleStatus=document.getElementById('roleStatus'),classCard=document.getElementById('classCard'),classList=document.getElementById('classList'),pointsCard=document.getElementById('pointsCard'),pointsStudent=document.getElementById('pointsStudent'),gradeInput=document.getElementById('gradeInput'),pointPreview=document.getElementById('pointPreview'),gradeHistory=document.getElementById('gradeHistory');
-let role='teacher';
-function recalc(){points={g:0,t:0,r:0,s:0};students.forEach(s=>{if(s.house)points[s.house]+=s.points})}
-function render(){recalc();Object.keys(points).forEach(k=>document.querySelector(`[data-house="${k}"]`).textContent=points[k]+' punti');const html=Object.entries(points).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>`<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><strong>${v} punti</strong></div>`).join('');ranking.innerHTML=html;studentRanking.innerHTML=html;classList.innerHTML=students.map(s=>`<div style="display:grid;grid-template-columns:1fr 170px 70px auto;gap:8px;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px"><strong>${s.name}</strong><span style="padding:9px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;color:#efe5c7">${s.house?houses[s.house]:'Non assegnata'}</span><span>${s.points} pt</span><button class="btn removeStudent" data-id="${s.id}">Rimuovi</button></div>`).join('');document.getElementById('sortBtn').disabled=students.length===0||students.every(s=>s.house);pointsStudent.innerHTML=students.filter(s=>s.house).map(s=>`<option value="${s.id}">${s.name} — ${houses[s.house]}</option>`).join('');renderHistory()}
-function renderHistory(){const s=students.find(x=>x.id==pointsStudent.value);gradeHistory.innerHTML=s?`<h4 style="margin:0">Storico di ${s.name}</h4>${s.history.length?s.history.slice().reverse().map((h,i)=>{const realIndex=s.history.length-1-i;return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px"><span>Voto ${h.grade} → ${h.points>=0?'+':''}${h.points} punti</span><button class="deleteGrade" data-index="${realIndex}" title="Rimuovi voto" aria-label="Rimuovi voto" style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button></div>`}).join(''):'<div>Nessun voto registrato.</div>'}`:''}
-function setRole(next){role=next;const teacher=next==='teacher';teacherControls.style.display=teacher?'flex':'none';studentView.style.display=teacher?'none':'block';classCard.style.display=teacher&&classCard.style.display==='block'?'block':'none';roleStatus.textContent=teacher?'Modalità docente — puoi modificare il torneo':'Modalità studente — sola consultazione';document.getElementById('sortBtn').disabled=!teacher}
-function openHat(){const unassigned=students.filter(s=>!s.house);if(!unassigned.length){result.textContent='Tutti gli studenti sono già stati assegnati a una Casata.';modal.classList.add('open');return}const keys=Object.keys(houses);const shuffledStudents=[...unassigned].sort(()=>Math.random()-0.5);const shuffledHouses=[...keys].sort(()=>Math.random()-0.5);const base=Math.floor(shuffledStudents.length/keys.length);const extra=shuffledStudents.length%keys.length;let index=0;shuffledHouses.forEach((house,i)=>{const quota=base+(i<extra?1:0);for(let j=0;j<quota;j++)shuffledStudents[index++].house=house});render();list.innerHTML='<div style="text-align:center;padding:18px;font-family:system-ui,sans-serif"><strong>🎩 Il Cappello Parlante ha completato lo smistamento!</strong><br><br>'+shuffledHouses.map(k=>`${houses[k]}: ${students.filter(s=>s.house===k).length} studenti`).join('<br>')+'</div>';result.textContent=`${unassigned.length} studenti smistati casualmente in modo equilibrato.`;modal.classList.add('open')}
-document.getElementById('sortBtn').onclick=openHat;document.getElementById('close').onclick=()=>modal.classList.remove('open');modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};document.getElementById('resetBtn').onclick=()=>{students.forEach(s=>{s.points=0;s.house=null});render();result.textContent=''};
-document.getElementById('manageBtn').onclick=()=>{classCard.style.display=classCard.style.display==='block'?'none':'block';render();classCard.scrollIntoView({behavior:'smooth'})};
-document.getElementById('addStudent').onclick=()=>{const input=document.getElementById('studentName'),name=input.value.trim();if(!name)return;students.push({id:Date.now(),name,house:null,points:0});input.value='';render()};
-classList.addEventListener('click',e=>{const b=e.target.closest('.removeStudent');if(!b)return;students=students.filter(s=>s.id!=b.dataset.id);render()});
-document.getElementById('pointsBtn').onclick=()=>{pointsCard.style.display=pointsCard.style.display==='block'?'none':'block';if(pointsCard.style.display==='block'){render();pointsCard.scrollIntoView({behavior:'smooth'})}};
-pointsStudent.onchange=renderHistory;
-gradeHistory.addEventListener('click',e=>{const b=e.target.closest('.deleteGrade');if(!b)return;const s=students.find(x=>x.id==pointsStudent.value);if(!s)return;const i=Number(b.dataset.index);if(!Number.isInteger(i)||!s.history[i])return;s.points-=s.history[i].points;s.history.splice(i,1);render()});
-gradeInput.oninput=()=>{const v=parseFloat(gradeInput.value);if(Number.isFinite(v)&&v>=1&&v<=10){const p=v-6;pointPreview.textContent=`Voto ${v.toString().replace('.',',')} → ${p>=0?'+':''}${p.toString().replace('.',',')} punti`;}else pointPreview.textContent='Inserisci un voto da 1 a 10.'};
-document.getElementById('saveGrade').onclick=()=>{const s=students.find(x=>x.id==pointsStudent.value),v=parseFloat(gradeInput.value);if(!s||!Number.isFinite(v)||v<1||v>10){alert('Seleziona uno studente e inserisci un voto valido da 1 a 10.');return}const p=v-6;s.points+=p;s.history.push({grade:v,points:p});gradeInput.value='';pointPreview.textContent='Voto registrato.';render()};
-document.getElementById('teacherMode').onclick=()=>setRole('teacher');
-document.getElementById('studentMode').onclick=()=>{modal.classList.remove('open');setRole('student')};
-setRole('teacher');
-render();
+(function(){
+  'use strict';
+  
+  const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
+  const KEY = 'hogwartsState';
+  const $ = id => document.getElementById(id);
+
+  let role = 'student';
+  let state;
+
+  // Caricamento da localStorage
+  try {
+    state = JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 };
+  } catch(e) {
+    state = { students: [], nextId: 1 };
+  }
+  if(!Array.isArray(state.students)) state = { students: [], nextId: 1 };
+
+  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  const score = v => Number((v - 6).toFixed(2));
+  
+  // Sanitizzazione XSS
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+
+  function totals(){
+    let t = { g: 0, t: 0, r: 0, s: 0 };
+    state.students.forEach(s => {
+      if(s.house) t[s.house] += s.points || 0;
+    });
+    return t;
+  }
+
+  function render(){
+    let t = totals();
+    Object.keys(t).forEach(k => {
+      let el = document.querySelector(`[data-house="${k}"]`);
+      if(el) el.textContent = t[k] + ' punti';
+    });
+
+    $('rankingList').innerHTML = Object.entries(t)
+      .sort((a,b) => b[1] - a[1])
+      .map(([k, v], i) => `<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><b>${v} punti</b></div>`)
+      .join('');
+
+    if(role === 'teacher') renderTeacher();
+  }
+
+  function renderTeacher(){
+    $('classList').innerHTML = state.students.map(s => 
+      `<div class="row">
+        <b>${esc(s.name)}</b>
+        <span style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${s.house ? houses[s.house] : 'Non assegnata'}</span>
+        <span>${s.points || 0} pt</span>
+        <button type="button" class="btn remove" data-id="${s.id}">Rimuovi</button>
+      </div>`
+    ).join('') || 'Nessuno studente inserito.';
+
+    $('pointsStudent').innerHTML = state.students
+      .filter(s => s.house)
+      .map(s => `<option value="${s.id}">${esc(s.name)} — ${houses[s.house]}</option>`)
+      .join('');
+
+    $('sortBtn').disabled = !state.students.length || state.students.every(s => s.house);
+    history();
+  }
+
+  function history(){
+    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value));
+    $('gradeHistory').innerHTML = s ? 
+      `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
+      ((s.history || []).slice().reverse().map(h => 
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
+          <span>Voto ${h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
+          <button type="button" class="del" data-id="${h.id}" title="Rimuovi voto" style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
+        </div>`
+      ).join('') || '<div>Nessun voto registrato.</div>') : '';
+  }
+
+  function setRole(r){
+    role = r;
+    let t = r === 'teacher';
+    $('teacherControls').style.display = t ? 'flex' : 'none';
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    $('authBox').style.display = 'none';
+    $('roleStatus').textContent = t ? 'Modalità docente — puoi modificare il torneo' : 'Modalità studente — sola consultazione';
+    render();
+  }
+
+  // Event Listeners
+  $('teacherMode').onclick = () => {
+    if(role !== 'teacher'){
+      $('authBox').style.display = 'grid';
+      $('email').focus();
+    }
+  };
+
+  $('studentMode').onclick = () => setRole('student');
+
+  $('loginBtn').onclick = () => {
+    if($('email').value.trim() === 'docente@hogwarts.it' && $('password').value === 'Newton2026') {
+      setRole('teacher');
+    } else {
+      $('authMessage').textContent = 'Credenziali non valide.';
+    }
+  };
+
+  $('password').onkeydown = e => {
+    if(e.key === 'Enter') $('loginBtn').click();
+  };
+
+  $('logoutBtn').onclick = () => setRole('student');
+
+  $('manageBtn').onclick = () => {
+    $('classCard').style.display = $('classCard').style.display === 'block' ? 'none' : 'block';
+    if($('classCard').style.display === 'block') $('classCard').scrollIntoView({ behavior: 'smooth' });
+  };
+
+  $('pointsBtn').onclick = () => {
+    $('pointsCard').style.display = $('pointsCard').style.display === 'block' ? 'none' : 'block';
+    if($('pointsCard').style.display === 'block'){
+      $('pointsCard').scrollIntoView({ behavior: 'smooth' });
+      history();
+    }
+  };
+
+  $('addStudent').onclick = () => {
+    let n = $('studentName').value.trim();
+    if(!n) return;
+    state.students.push({ id: state.nextId++, name: n, house: null, points: 0, history: [] });
+    $('studentName').value = '';
+    save();
+    render();
+  };
+
+  $('classList').onclick = e => {
+    let b = e.target.closest('.remove');
+    if(b && confirm('Rimuovere questo studente?')){
+      state.students = state.students.filter(s => String(s.id) !== b.dataset.id);
+      save();
+      render();
+    }
+  };
+
+  $('sortBtn').onclick = () => {
+    let u = state.students.filter(s => !s.house);
+    if(!u.length){
+      $('result').textContent = 'Tutti gli studenti sono già stati assegnati a una Casata.';
+      $('modal').classList.add('open');
+      return;
+    }
+    let k = Object.keys(houses),
+        a = [...u].sort(() => Math.random() - .5),
+        o = [...k].sort(() => Math.random() - .5),
+        base = Math.floor(a.length / 4),
+        extra = a.length % 4,
+        i = 0;
+
+    o.forEach((h, n) => {
+      for(let j = 0; j < base + (n < extra ? 1 : 0); j++) {
+        a[i++].house = h;
+      }
+    });
+
+    save();
+    render();
+    $('result').innerHTML = '<strong>🎩 Smistamento completato!</strong><br><br>' +
+      o.map(h => houses[h] + ': ' + state.students.filter(s => s.house === h).length + ' studenti').join('<br>');
+    $('modal').classList.add('open');
+  };
+
+  $('close').onclick = () => $('modal').classList.remove('open');
+  $('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('open'); };
+
+  $('resetBtn').onclick = () => {
+    if(confirm('Azzera smistamenti, voti e punteggi?')){
+      state.students.forEach(s => {
+        s.house = null;
+        s.points = 0;
+        s.history = [];
+      });
+      save();
+      render();
+    }
+  };
+
+  $('pointsStudent').onchange = history;
+
+  $('gradeInput').oninput = () => {
+    let v = parseFloat($('gradeInput').value);
+    $('pointPreview').textContent = Number.isFinite(v) && v >= 1 && v <= 10 ?
+      'Voto ' + v + ' → ' + (score(v) >= 0 ? '+' : '') + score(v) + ' punti' :
+      'Inserisci un voto da 1 a 10.';
+  };
+
+  $('saveGrade').onclick = () => {
+    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
+        v = parseFloat($('gradeInput').value);
+    if(!s || !Number.isFinite(v) || v < 1 || v > 10){
+      alert('Seleziona uno studente e inserisci un voto valido.');
+      return;
+    }
+    let p = score(v);
+    s.points += p;
+    s.history.push({ id: Date.now(), grade: v, points: p });
+    $('gradeInput').value = '';
+    save();
+    render();
+  };
+
+  $('gradeHistory').onclick = e => {
+    let b = e.target.closest('.del');
+    if(!b) return;
+    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
+        i = s.history.findIndex(h => String(h.id) === b.dataset.id);
+    if(i >= 0 && confirm('Rimuovere questo voto?')){
+      s.points -= s.history[i].points;
+      s.history.splice(i, 1);
+      save();
+      render();
+    }
+  };
+
+  // Inizializzazione in modalità studente (sola lettura)
+  setRole('student');
+})();
 </script>
-</body></html>
+</body>
+</html>
