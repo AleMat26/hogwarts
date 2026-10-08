@@ -1,1002 +1,628 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="it">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hogwarts — Il Torneo delle Quattro Casate</title>
-    <style>
-        :root {
-            --bg-dark: #0b0d13;
-            --bg-card: #131722;
-            --gold: #d8b56a;
-            --gold-hover: #f1cf85;
-            --paper: #f4ebd9;
-            --muted: #a0998b;
-            --line: rgba(216, 181, 106, 0.25);
-            
-            --griff-color: #b6424b;
-            --huff-color: #d0a83e;
-            --rave-color: #638bc0;
-            --slyt-color: #5e9368;
-        }
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Hogwarts — Il Torneo delle Quattro Casate</title>
+<style>
+:root {
+  color-scheme: dark;
+  --gold: #d8b56a;
+  --ink: #11131b;
+  --paper: #efe5c7;
+  --muted: #c7c0ae;
+  --panel: #171923;
+  --line: #5f5236;
+}
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  min-height: 100%;
+  font-family: Georgia, 'Times New Roman', serif;
+  background: #080a10;
+  color: var(--paper);
+}
+body {
+  background: radial-gradient(circle at 50% 0%, #26314c 0, #101522 38%, #070910 78%);
+}
+#app {
+  min-height: 100vh;
+  background: linear-gradient(180deg, rgba(7,9,16,.12), rgba(7,9,16,.78));
+  overflow: hidden;
+}
+header {
+  padding: 42px 22px 20px;
+  text-align: center;
+  position: relative;
+}
+header:before, header:after {
+  content: '✦';
+  position: absolute;
+  top: 54px;
+  color: var(--gold);
+  opacity: .75;
+  font-size: 20px;
+}
+header:before { left: 10%; }
+header:after { right: 10%; }
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
+.eyebrow {
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  font-size: 12px;
+  color: var(--gold);
+  font-family: system-ui, sans-serif;
+}
+.title {
+  font-size: clamp(38px, 7vw, 74px);
+  margin: 10px 0 4px;
+  letter-spacing: .03em;
+  text-shadow: 0 3px 22px #000;
+}
+.subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-style: italic;
+  font-size: 18px;
+}
+.crest {
+  width: 126px;
+  height: 146px;
+  margin: 22px auto 8px;
+  position: relative;
+  filter: drop-shadow(0 8px 14px #0008);
+}
+.shield {
+  width: 100%;
+  height: 100%;
+  border: 3px solid var(--gold);
+  border-radius: 14px 14px 48px 48px;
+  background: conic-gradient(from 45deg, #8b2026 0 25%, #b38b2d 0 50%, #315a8b 0 75%, #355d3e 0);
+  clip-path: polygon(8% 3%, 92% 3%, 96% 67%, 50% 100%, 4% 67%);
+  display: grid;
+  place-items: center;
+}
+.crestmark {
+  font-size: 48px;
+  background: #0e1119dd;
+  border: 2px solid var(--gold);
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+main {
+  max-width: 1120px;
+  margin: auto;
+  padding: 18px 20px 58px;
+}
+.intro {
+  max-width: 760px;
+  margin: 0 auto 28px;
+  text-align: center;
+  color: #d8d1bf;
+  line-height: 1.65;
+}
+.controls {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: 22px 0 30px;
+}
+.btn {
+  border: 1px solid var(--gold);
+  background: #171923;
+  color: var(--paper);
+  padding: 12px 18px;
+  border-radius: 999px;
+  font: 600 14px system-ui, sans-serif;
+  cursor: pointer;
+}
+.btn:hover { background: #262936; }
+.btn.primary { background: var(--gold); color: #15120c; }
 
-        body {
-            background: radial-gradient(circle at top center, #1b2234 0%, var(--bg-dark) 70%);
-            color: var(--paper);
-            font-family: Georgia, 'Times New Roman', serif;
-            min-height: 100vh;
-            padding-bottom: 60px;
-        }
+.authbox {
+  display: none;
+  max-width: 420px;
+  margin: 15px auto;
+  gap: 8px;
+}
+.authbox input, input, select {
+  padding: 11px;
+  border-radius: 8px;
+  background: #0f1118;
+  color: #efe5c7;
+  border: 1px solid #5f5236;
+}
+.authbox input { width: 100%; }
+.message {
+  text-align: center;
+  color: var(--gold);
+  font: 14px system-ui, sans-serif;
+  margin-top: 10px;
+}
 
-        header {
-            text-align: center;
-            padding: 30px 20px 10px;
-            position: relative;
-        }
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+.house {
+  min-height: 270px;
+  border: 1px solid var(--line);
+  background: linear-gradient(145deg, #181b25, #0f1118);
+  border-radius: 16px;
+  padding: 22px 18px;
+  position: relative;
+  overflow: hidden;
+  transition: .25s transform, .25s border-color;
+}
+.house:hover {
+  transform: translateY(-5px);
+  border-color: var(--gold);
+}
+.house:after {
+  content: '';
+  position: absolute;
+  width: 160px;
+  height: 160px;
+  border-radius: 50%;
+  right: -90px;
+  bottom: -90px;
+  background: currentColor;
+  opacity: .07;
+}
+.sigil {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  margin: auto;
+  border: 2px solid currentColor;
+  display: grid;
+  place-items: center;
+  font-size: 35px;
+  background: #0a0c12;
+}
+.house h2 { text-align: center; margin: 14px 0 4px; font-size: 24px; }
+.house p { text-align: center; color: #bcb6a8; line-height: 1.5; margin: 0; font-family: system-ui, sans-serif; font-size: 14px; }
+.points { text-align: center; font-family: system-ui, sans-serif; font-weight: 800; color: var(--gold); margin-top: 15px; }
 
-        .eyebrow {
-            letter-spacing: 0.28em;
-            text-transform: uppercase;
-            font-size: 11px;
-            color: var(--gold);
-            font-family: system-ui, -apple-system, sans-serif;
-            font-weight: 600;
-        }
+.g { color: #b6424b; }
+.t { color: #d0a83e; }
+.r { color: #638bc0; }
+.s { color: #5e9368; }
 
-        .title {
-            font-size: clamp(32px, 6vw, 62px);
-            margin: 8px 0;
-            letter-spacing: 0.04em;
-            color: #ffffff;
-            text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8), 0 0 10px rgba(216, 181, 106, 0.3);
-        }
+.card {
+  margin-top: 28px;
+  border: 1px solid var(--line);
+  background: #12151ed9;
+  border-radius: 18px;
+  padding: 22px;
+}
+.card h3 { margin: 0 0 12px; color: var(--gold); font-size: 20px; }
 
-        .subtitle {
-            color: var(--muted);
-            font-style: italic;
-            font-size: 16px;
-        }
+.list { display: grid; gap: 8px; font-family: system-ui, sans-serif; }
+.row {
+  display: grid;
+  grid-template-columns: 1fr 160px 60px auto;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border: 1px solid #3f3b32;
+  border-radius: 10px;
+}
 
-        /* Stemma Hogwarts CSS originale (File 5) */
-        .crest {
-            width: 120px;
-            height: 140px;
-            margin: 20px auto 10px;
-            position: relative;
-            filter: drop-shadow(0 10px 18px rgba(0,0,0,0.7));
-        }
+.instructions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  font-family: system-ui, sans-serif;
+}
+.step {
+  background: #191c26;
+  border-radius: 12px;
+  padding: 15px;
+  color: #cbc5b6;
+  line-height: 1.5;
+}
+.step b { color: #fff; display: block; margin-bottom: 5px; }
 
-        .shield {
-            width: 100%;
-            height: 100%;
-            border: 3px solid var(--gold);
-            border-radius: 14px 14px 48px 48px;
-            background: conic-gradient(from 45deg, var(--griff-color) 0 25%, var(--huff-color) 0 50%, var(--rave-color) 0 75%, var(--slyt-color) 0);
-            clip-path: polygon(8% 3%, 92% 3%, 96% 67%, 50% 100%, 4% 67%);
-            display: grid;
-            place-items: center;
-        }
+.modal {
+  position: fixed;
+  inset: 0;
+  background: #000a;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 5;
+}
+.modal.open { display: flex; }
+.dialog {
+  max-width: 560px;
+  width: 100%;
+  background: #171923;
+  border: 1px solid var(--gold);
+  border-radius: 20px;
+  padding: 26px;
+  box-shadow: 0 20px 70px #000;
+}
+.dialog h2 { margin-top: 0; }
+.close {
+  float: right;
+  background: none;
+  border: 0;
+  color: #aaa;
+  font-size: 26px;
+  cursor: pointer;
+}
 
-        .crestmark {
-            font-size: 42px;
-            background: rgba(14, 17, 25, 0.9);
-            border: 2px solid var(--gold);
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-        }
+footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; padding: 22px; }
 
-        /* Navigazione Rapida Header */
-        .nav-anchors {
-            display: flex;
-            justify-content: center;
-            gap: 20px;
-            margin-top: 20px;
-            flex-wrap: wrap;
-        }
-
-        .nav-anchor {
-            color: var(--paper);
-            text-decoration: none;
-            font-family: system-ui, sans-serif;
-            font-size: 13px;
-            text-transform: uppercase;
-            letter-spacing: 0.1em;
-            padding: 6px 14px;
-            border-radius: 20px;
-            border: 1px solid transparent;
-            transition: all 0.2s ease;
-        }
-
-        .nav-anchor:hover {
-            border-color: var(--gold);
-            color: var(--gold);
-            background: rgba(216, 181, 106, 0.08);
-        }
-
-        main {
-            max-width: 1100px;
-            margin: 0 auto;
-            padding: 0 20px;
-        }
-
-        .controls {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 25px 0;
-        }
-
-        .btn {
-            border: 1px solid var(--gold);
-            background: #171923;
-            color: var(--paper);
-            padding: 10px 20px;
-            border-radius: 999px;
-            font: 600 13px system-ui, sans-serif;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .btn:hover {
-            background: #262a3a;
-            border-color: var(--gold-hover);
-        }
-
-        .btn.primary {
-            background: var(--gold);
-            color: #111;
-        }
-
-        .btn.primary:hover {
-            background: var(--gold-hover);
-        }
-
-        .btn.danger {
-            border-color: #e53e3e;
-            color: #fc8181;
-        }
-
-        .btn.danger:hover {
-            background: rgba(229, 62, 62, 0.15);
-        }
-
-        /* Auth Box (Login Docente) */
-        .authbox {
-            display: none;
-            max-width: 380px;
-            margin: 0 auto 25px;
-            background: var(--bg-card);
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid var(--line);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .authbox.active {
-            display: flex;
-        }
-
-        input, select {
-            padding: 10px 14px;
-            border-radius: 8px;
-            background: #0d0f17;
-            color: var(--paper);
-            border: 1px solid var(--line);
-            font-family: system-ui, sans-serif;
-            font-size: 14px;
-            outline: none;
-            width: 100%;
-        }
-
-        input:focus, select:focus {
-            border-color: var(--gold);
-            box-shadow: 0 0 0 2px rgba(216, 181, 106, 0.2);
-        }
-
-        .message {
-            text-align: center;
-            color: var(--gold);
-            font-family: system-ui, sans-serif;
-            font-size: 13px;
-            margin-top: 6px;
-            min-height: 18px;
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 18px;
-            margin-bottom: 30px;
-        }
-
-        .house {
-            background: linear-gradient(145deg, #181c2b, #0f121d);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 22px 18px;
-            position: relative;
-            overflow: hidden;
-            transition: transform 0.25s ease, border-color 0.25s ease;
-        }
-
-        .house:hover {
-            transform: translateY(-4px);
-            border-color: var(--gold);
-        }
-
-        .sigil {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            margin: 0 auto 12px;
-            border: 2px solid currentColor;
-            display: grid;
-            place-items: center;
-            font-size: 32px;
-            background: #0a0c12;
-            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
-        }
-
-        .house h2 {
-            text-align: center;
-            font-size: 22px;
-            margin-bottom: 6px;
-        }
-
-        .house p {
-            text-align: center;
-            color: var(--muted);
-            font-family: system-ui, sans-serif;
-            font-size: 13px;
-            line-height: 1.4;
-        }
-
-        .points {
-            text-align: center;
-            font-family: system-ui, sans-serif;
-            font-weight: 800;
-            font-size: 24px;
-            color: var(--gold);
-            margin-top: 15px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-
-        .g { color: var(--griff-color); }
-        .t { color: var(--huff-color); }
-        .r { color: var(--rave-color); }
-        .s { color: var(--slyt-color); }
-
-        /* Card Generica */
-        .card {
-            background: rgba(19, 23, 34, 0.85);
-            border: 1px solid var(--line);
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 30px;
-            backdrop-filter: blur(10px);
-        }
-
-        .card h3 {
-            color: var(--gold);
-            font-size: 20px;
-            margin-bottom: 16px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .form-row {
-            display: flex;
-            gap: 10px;
-            flex-wrap: wrap;
-            margin-bottom: 15px;
-        }
-
-        .form-row > * {
-            flex: 1;
-            min-width: 140px;
-        }
-
-        .list {
-            display: grid;
-            gap: 10px;
-            font-family: system-ui, sans-serif;
-        }
-
-        .row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 12px;
-            padding: 12px 16px;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            background: rgba(10, 12, 18, 0.5);
-            flex-wrap: wrap;
-        }
-
-        .student-info {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex: 2;
-            min-width: 180px;
-        }
-
-        .student-name {
-            font-weight: 600;
-            color: var(--paper);
-        }
-
-        .student-house-tag {
-            font-size: 11px;
-            padding: 3px 8px;
-            border-radius: 12px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .tag-g { background: rgba(182, 66, 75, 0.2); color: var(--griff-color); border: 1px solid var(--griff-color); }
-        .tag-t { background: rgba(208, 168, 62, 0.2); color: var(--huff-color); border: 1px solid var(--huff-color); }
-        .tag-r { background: rgba(99, 139, 192, 0.2); color: var(--rave-color); border: 1px solid var(--rave-color); }
-        .tag-s { background: rgba(94, 147, 104, 0.2); color: var(--slyt-color); border: 1px solid var(--slyt-color); }
-
-        .student-stats {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            font-size: 13px;
-            color: var(--muted);
-        }
-
-        .badge-points {
-            font-weight: 700;
-            color: var(--gold);
-            font-size: 15px;
-        }
-
-        /* Istruzioni */
-        .instructions {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 16px;
-            font-family: system-ui, sans-serif;
-        }
-
-        .step {
-            background: rgba(25, 28, 38, 0.7);
-            border-radius: 12px;
-            padding: 16px;
-            border: 1px solid rgba(255,255,255,0.05);
-            color: var(--muted);
-            font-size: 13px;
-            line-height: 1.5;
-        }
-
-        .step b {
-            color: var(--paper);
-            display: block;
-            margin-bottom: 6px;
-            font-size: 14px;
-        }
-
-        /* Modal Storico Voti */
-        .modal {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            z-index: 100;
-            backdrop-filter: blur(4px);
-        }
-
-        .modal.open {
-            display: flex;
-        }
-
-        .dialog {
-            max-width: 550px;
-            width: 100%;
-            background: #151824;
-            border: 1px solid var(--gold);
-            border-radius: 18px;
-            padding: 24px;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.9);
-            font-family: system-ui, sans-serif;
-            max-height: 85vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .dialog-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 16px;
-        }
-
-        .dialog-body {
-            overflow-y: auto;
-            flex: 1;
-            padding-right: 4px;
-        }
-
-        .close {
-            background: none;
-            border: 0;
-            color: var(--muted);
-            font-size: 24px;
-            cursor: pointer;
-        }
-
-        .close:hover { color: var(--paper); }
-
-        .grade-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 8px 12px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            font-size: 13px;
-        }
-
-        footer {
-            text-align: center;
-            color: var(--muted);
-            font: 12px system-ui, sans-serif;
-            padding: 25px 20px;
-        }
-
-        @media(max-width: 600px) {
-            .row { flex-direction: column; align-items: flex-start; }
-            .student-stats { width: 100%; justify-content: space-between; }
-        }
-    </style>
+@media(max-width: 850px) {
+  .grid { grid-template-columns: repeat(2, 1fr); }
+  .instructions { grid-template-columns: 1fr; }
+  .row { grid-template-columns: 1fr; }
+}
+@media(max-width: 520px) {
+  .grid { grid-template-columns: 1fr; }
+  .crest { width: 105px; height: 122px; }
+}
+</style>
 </head>
 <body>
-
-    <header>
-        <div class="eyebrow">Scuola di Magia e Stregoneria</div>
-        <h1 class="title">Hogwarts</h1>
-        <div class="subtitle">Il Torneo delle Quattro Casate</div>
-
-        <div class="crest">
-            <div class="shield">
-                <div class="crestmark">⚡</div>
-            </div>
-        </div>
-
-        <nav class="nav-anchors">
-            <a href="#houses" class="nav-anchor">Casate</a>
-            <a href="#ranking" class="nav-anchor">Classifica Studenti</a>
-            <a href="#instructions" class="nav-anchor">Istruzioni</a>
-        </nav>
-    </header>
-
-    <main>
-        <div class="controls">
-            <button id="btnToggleAuth" class="btn">🔑 Area Docente</button>
-            <button id="btnHat" class="btn" style="display:none;">🎩 Cappello Parlante</button>
-            <button id="btnLogout" class="btn danger" style="display:none;">🚪 Esci Docente</button>
-        </div>
-
-        <div id="authBox" class="authbox">
-            <input type="email" id="authEmail" placeholder="Email Docente (docente@hogwarts.it)">
-            <input type="password" id="authPass" placeholder="Password (Newton2026)">
-            <button id="btnLogin" class="btn primary">Accedi</button>
-        </div>
-
-        <div id="msg" class="message"></div>
-
-        <section id="houses" class="grid">
-            <div class="house g">
-                <div class="sigil">🦁</div>
-                <h2>Grifondoro</h2>
-                <p>Coraggio, audacia e nobiltà d'animo.</p>
-                <div class="points" id="pts-g">0 Punti</div>
-            </div>
-            <div class="house t">
-                <div class="sigil">🦡</div>
-                <h2>Tassorosso</h2>
-                <p>Dedizione, lealtà, pazienza e amicizia.</p>
-                <div class="points" id="pts-t">0 Punti</div>
-            </div>
-            <div class="house r">
-                <div class="sigil">🦅</div>
-                <h2>Corvonero</h2>
-                <p>Ingegno, intelligenza e creatività.</p>
-                <div class="points" id="pts-r">0 Punti</div>
-            </div>
-            <div class="house s">
-                <div class="sigil">🐍</div>
-                <h2>Serpeverde</h2>
-                <p>Ambizione, astuzia e determinazione.</p>
-                <div class="points" id="pts-s">0 Punti</div>
-            </div>
-        </section>
-
-        <section id="teacherPanel" class="card" style="display:none;">
-            <h3>🧙‍♂️ Gestione Docente</h3>
-            
-            <!-- Aggiunta Studente -->
-            <div style="margin-bottom: 20px;">
-                <h4 style="font-size: 14px; color: var(--paper); font-family: system-ui; margin-bottom: 8px;">Aggiungi Nuovo Studente</h4>
-                <div class="form-row">
-                    <input type="text" id="studentName" placeholder="Nome Cognome studente (es. Harry Potter)">
-                    <select id="studentHouse">
-                        <option value="unassigned">🎩 Non Assegnato (Cappello Parlante)</option>
-                        <option value="g">🦁 Grifondoro</option>
-                        <option value="t">🦡 Tassorosso</option>
-                        <option value="r">🦅 Corvonero</option>
-                        <option value="s">🐍 Serpeverde</option>
-                    </select>
-                    <button id="btnAddStudent" class="btn primary" style="justify-content: center;">Aggiungi Studente</button>
-                </div>
-            </div>
-
-            <hr style="border: 0; border-top: 1px solid var(--line); margin: 20px 0;">
-
-            <!-- Registrazione Voto -->
-            <div>
-                <h4 style="font-size: 14px; color: var(--paper); font-family: system-ui; margin-bottom: 8px;">Registra Voto Valutazione</h4>
-                <div class="form-row">
-                    <select id="gradeStudentSelect">
-                        <option value="">-- Seleziona Studente --</option>
-                    </select>
-                    <input type="number" id="gradeInput" step="0.1" min="0" max="10" placeholder="Voto (es. 8.5)">
-                    <button id="btnAddGrade" class="btn primary" style="justify-content: center;">Registra Voto e Punti</button>
-                </div>
-                <div style="font-size: 12px; color: var(--muted); font-family: system-ui; margin-top: 4px;">
-                    * Calcolo Punti: <code>Punti = Voto - 6.0</code> (es. Voto 8 = +2 Punti, Voto 5 = -1 Punto)
-                </div>
-            </div>
-        </section>
-
-        <section id="ranking" class="card">
-            <h3>🏆 Classifica Generale Studenti</h3>
-            <div id="studentList" class="list">
-                <!-- Inserimento dinamico studenti -->
-            </div>
-        </section>
-
-        <section id="instructions" class="card">
-            <h3>📜 Regolamento del Torneo</h3>
-            <div class="instructions">
-                <div class="step">
-                    <b>1. Assegnazione Voti</b>
-                    I docenti possono registrare voti da 0 a 10 per ciascuno studente registrato.
-                </div>
-                <div class="step">
-                    <b>2. Calcolo Punti Casata</b>
-                    Il punteggio generato da ogni prova corrisponde alla formula precisa: <code>Voto - 6</code>.
-                </div>
-                <div class="step">
-                    <b>3. Il Cappello Parlante</b>
-                    Gli studenti non assegnati possono essere distribuiti equamente tra le quattro casate con un click.
-                </div>
-            </div>
-        </section>
-    </main>
-
-    <div id="modalHistory" class="modal">
-        <div class="dialog">
-            <div class="dialog-header">
-                <h3 id="modalStudentName" style="color: var(--gold); margin:0;">Storico Voti</h3>
-                <button class="close" id="btnCloseModal">&times;</button>
-            </div>
-            <div id="modalBody" class="dialog-body">
-                <!-- Storico inserito dinamicamente -->
-            </div>
-        </div>
+<div id="app">
+<header>
+  <div class="eyebrow">Anno scolastico · Liceo Scientifico Newton</div>
+  <div class="crest"><div class="shield"><div class="crestmark">⚡</div></div></div>
+  <h1 class="title">Hogwarts</h1>
+  <p class="subtitle">Il Torneo delle Quattro Casate</p>
+</header>
+<main>
+  <p class="intro">Benvenuti nella Sala Grande. Le Casate conquistano punti e portano la propria squadra in cima alla classifica.</p>
+  
+  <!-- ACCESSO -->
+  <section class="card" style="margin-top:0">
+    <h3>Accesso</h3>
+    <p style="color:#c7c0ae;font-family:system-ui,sans-serif">L'area studente è disponibile in sola lettura. L'area docente richiede autenticazione.</p>
+    <div class="controls" style="margin:12px 0 0">
+      <button type="button" class="btn" id="teacherMode">👨‍🏫 Area docente</button>
+      <button type="button" class="btn primary" id="studentMode">🎓 Area studente</button>
     </div>
+    <div id="roleStatus" class="message">Modalità studente — sola consultazione</div>
+    <div id="authBox" class="authbox">
+      <input id="email" type="email" placeholder="Email docente">
+      <input id="password" type="password" placeholder="Password">
+      <button type="button" class="btn primary" id="loginBtn">Accedi</button>
+      <div id="authMessage" class="message"></div>
+    </div>
+  </section>
 
-    <footer>
-        Hogwarts School of Witchcraft and Wizardry — Torneo delle Quattro Casate
-    </footer>
+  <!-- CONTROLLI DOCENTE -->
+  <div class="controls" id="teacherControls" style="display:none">
+    <button type="button" class="btn primary" id="sortBtn">🎩 Cappello Parlante</button>
+    <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
+    <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
+    <button type="button" class="btn" id="resetBtn">↺ Azzera</button>
+    <button type="button" class="btn" id="logoutBtn">Esci</button>
+  </div>
 
-    <script>
-        // Struttura dati e stato dell'applicazione
-        const DEFAULT_STATE = {
-            isTeacherMode: false,
-            students: [
-                { id: '1', name: 'Harry Potter', house: 'g', grades: [8.5, 9.0] },
-                { id: '2', name: 'Hermione Granger', house: 'g', grades: [10.0, 10.0] },
-                { id: '3', name: 'Cedric Diggory', house: 't', grades: [8.0, 8.5] },
-                { id: '4', name: 'Luna Lovegood', house: 'r', grades: [8.5, 9.0] },
-                { id: '5', name: 'Draco Malfoy', house: 's', grades: [7.5, 8.0] }
-            ]
-        };
+  <!-- MENU NAVIGAZIONE ESTETICO -->
+  <nav class="card" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px" aria-label="Sezioni">
+    <a class="btn" href="#houses" style="text-decoration:none">🦁 Le Casate</a>
+    <a class="btn" href="#ranking" style="text-decoration:none">🏆 Classifica</a>
+    <a class="btn" href="#instructions" style="text-decoration:none">📜 Regolamento</a>
+  </nav>
 
-        let state = loadState();
+  <!-- LE CASATE -->
+  <section class="grid" id="houses">
+    <article class="house g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
+    <article class="house t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
+    <article class="house r"><div class="sigil">🦅</div><h2>Corvonero</h2><p>Curiosità, ingegno e amore per la conoscenza.</p><div class="points" data-house="r">0 punti</div></article>
+    <article class="house s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
+  </section>
 
-        // Utility: Sanitizzazione XSS (Escaping)
-        function esc(str) {
-            if (!str) return '';
-            return String(str)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
-        }
+  <!-- CLASSIFICA -->
+  <section class="card" id="ranking">
+    <h3>Classifica delle Casate</h3>
+    <div id="rankingList" class="list"></div>
+  </section>
 
-        // Caricamento e Salvataggio LocalStorage
-        function loadState() {
-            try {
-                const saved = localStorage.getItem('hogwartsState');
-                if (saved) {
-                    const parsed = JSON.parse(saved);
-                    // Mantiene lo stato docente corrente
-                    parsed.isTeacherMode = false; 
-                    return parsed;
-                }
-            } catch (e) {
-                console.error("Errore nel caricamento dello stato:", e);
-            }
-            return JSON.parse(JSON.stringify(DEFAULT_STATE));
-        }
+  <!-- GESTIONE CLASSE (DOCENTE) -->
+  <section class="card" id="classCard" style="display:none">
+    <h3>Gestione classe</h3>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+      <input id="studentName" placeholder="Nome e cognome (premi Invio)" style="flex:1;min-width:220px;">
+      <button type="button" class="btn primary" id="addStudent">＋ Aggiungi studente</button>
+    </div>
+    <div id="classList" class="list"></div>
+  </section>
 
-        function saveState() {
-            try {
-                localStorage.setItem('hogwartsState', JSON.stringify(state));
-            } catch (e) {
-                console.error("Errore durante il salvataggio dello stato:", e);
-            }
-        }
+  <!-- ASSEGNA PUNTI -->
+  <section class="card" id="pointsCard" style="display:none">
+    <h3>Assegna punti tramite voto</h3>
+    <div style="display:grid;gap:12px;max-width:520px;margin:auto">
+      <label style="font-family:system-ui,sans-serif">Studente
+        <select id="pointsStudent" style="width:100%;margin-top:5px;"></select>
+      </label>
+      <label style="font-family:system-ui,sans-serif">Voto
+        <input id="gradeInput" type="number" min="1" max="10" step="0.5" placeholder="es. 8,5 (premi Invio)" style="width:100%;margin-top:5px;">
+      </label>
+      <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div>
+      <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
+    </div>
+    <div id="gradeHistory" class="list" style="margin-top:18px"></div>
+  </section>
 
-        const btnToggleAuth = document.getElementById('btnToggleAuth');
-        const authBox = document.getElementById('authBox');
-        const authEmail = document.getElementById('authEmail');
-        const authPass = document.getElementById('authPass');
-        const btnLogin = document.getElementById('btnLogin');
-        const btnLogout = document.getElementById('btnLogout');
-        const btnHat = document.getElementById('btnHat');
-        const teacherPanel = document.getElementById('teacherPanel');
-        const msgBox = document.getElementById('msg');
+  <!-- REGOLAMENTO -->
+  <section class="card" id="instructions">
+    <h3>Come funciona</h3>
+    <div class="instructions">
+      <div class="step"><b>🎩 Cappello Parlante</b>Distribuisce casualmente gli studenti in modo equilibrato fra le quattro Casate.</div>
+      <div class="step"><b>🏆 Classifica</b>Il punteggio complessivo della Casata è dato dalla somma dei punti dei singoli studenti.</div>
+      <div class="step"><b>📈 Voti e Punti</b>Ogni voto inserito produce automaticamente <strong>voto − 6</strong> punti.</div>
+    </div>
+  </section>
 
-        const studentName = document.getElementById('studentName');
-        const studentHouse = document.getElementById('studentHouse');
-        const btnAddStudent = document.getElementById('btnAddStudent');
+  <footer>Pagina Hogwarts · prototipo interattivo per uso didattico</footer>
+</main>
 
-        const gradeStudentSelect = document.getElementById('gradeStudentSelect');
-        const gradeInput = document.getElementById('gradeInput');
-        const btnAddGrade = document.getElementById('btnAddGrade');
+<!-- MODALE CAPPELLO PARLANTE -->
+<div class="modal" id="modal">
+  <div class="dialog">
+    <button type="button" class="close" id="close">×</button>
+    <h2>Il Cappello Parlante</h2>
+    <div id="result" style="margin-top:15px;font-family:system-ui,sans-serif"></div>
+  </div>
+</div>
+</div>
 
-        const studentList = document.getElementById('studentList');
-        const modalHistory = document.getElementById('modalHistory');
-        const modalStudentName = document.getElementById('modalStudentName');
-        const modalBody = document.getElementById('modalBody');
-        const btnCloseModal = document.getElementById('btnCloseModal');
+<script>
+(function(){
+  'use strict';
+  
+  const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
+  const KEY = 'hogwartsState';
+  const $ = id => document.getElementById(id);
 
-        function calculateStudentPoints(student) {
-            if (!student.grades || student.grades.length === 0) return 0;
-            const total = student.grades.reduce((acc, v) => acc + (v - 6), 0);
-            return parseFloat(total.toFixed(2));
-        }
+  let role = 'student';
+  let state;
 
-        function calculateHousePoints() {
-            const totals = { g: 0, t: 0, r: 0, s: 0 };
-            state.students.forEach(s => {
-                if (totals[s.house] !== undefined) {
-                    totals[s.house] += calculateStudentPoints(s);
-                }
-            });
-            return totals;
-        }
+  try {
+    state = JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 };
+  } catch(e) {
+    state = { students: [], nextId: 1 };
+  }
+  if(!Array.isArray(state.students)) state = { students: [], nextId: 1 };
 
-        function showMessage(text) {
-            msgBox.textContent = text;
-            setTimeout(() => {
-                if (msgBox.textContent === text) msgBox.textContent = '';
-            }, 4000);
-        }
+  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  const score = v => Number((v - 6).toFixed(2));
+  
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 
-        function renderUI() {
-            // Render Punti Casate
-            const housePts = calculateHousePoints();
-            document.getElementById('pts-g').textContent = `${housePts.g.toFixed(1)} Punti`;
-            document.getElementById('pts-t').textContent = `${housePts.t.toFixed(1)} Punti`;
-            document.getElementById('pts-r').textContent = `${housePts.r.toFixed(1)} Punti`;
-            document.getElementById('pts-s').textContent = `${housePts.s.toFixed(1)} Punti`;
+  function totals(){
+    let t = { g: 0, t: 0, r: 0, s: 0 };
+    state.students.forEach(s => {
+      if(s.house) t[s.house] += s.points || 0;
+    });
+    return t;
+  }
 
-            // Visibilità Modalità Docente
-            if (state.isTeacherMode) {
-                teacherPanel.style.display = 'block';
-                btnHat.style.display = 'inline-flex';
-                btnLogout.style.display = 'inline-flex';
-                btnToggleAuth.style.display = 'none';
-                authBox.classList.remove('active');
-            } else {
-                teacherPanel.style.display = 'none';
-                btnHat.style.display = 'none';
-                btnLogout.style.display = 'none';
-                btnToggleAuth.style.display = 'inline-flex';
-            }
+  function render(){
+    let t = totals();
+    Object.keys(t).forEach(k => {
+      let el = document.querySelector(`[data-house="${k}"]`);
+      if(el) el.textContent = t[k] + ' punti';
+    });
 
-            // Render Select Studenti Voto (mantenendo la selezione attiva!)
-            const currentSelectedId = gradeStudentSelect.value;
-            gradeStudentSelect.innerHTML = '<option value="">-- Seleziona Studente --</option>';
-            
-            // Ordina studenti alfabeticamente per il menu a tendina
-            const sortedForSelect = [...state.students].sort((a,b) => a.name.localeCompare(b.name));
-            sortedForSelect.forEach(s => {
-                const opt = document.createElement('option');
-                opt.value = s.id;
-                opt.textContent = `${s.name} (${getHouseName(s.house)})`;
-                gradeStudentSelect.appendChild(opt);
-            });
+    $('rankingList').innerHTML = Object.entries(t)
+      .sort((a,b) => b[1] - a[1])
+      .map(([k, v], i) => `<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><b>${v} punti</b></div>`)
+      .join('');
 
-            // Ripristina la selezione precedente se ancora valida
-            if (currentSelectedId && state.students.some(s => s.id === currentSelectedId)) {
-                gradeStudentSelect.value = currentSelectedId;
-            }
+    if(role === 'teacher') renderTeacher();
+  }
 
-            // Render Lista Classifica Studenti (Ordinati per punti decrescenti)
-            const sortedStudents = [...state.students].sort((a, b) => calculateStudentPoints(b) - calculateStudentPoints(a));
-            
-            studentList.innerHTML = '';
-            if (sortedStudents.length === 0) {
-                studentList.innerHTML = '<div style="text-align:center; color:var(--muted); padding:15px;">Nessuno studente iscritto.</div>';
-                return;
-            }
+  function renderTeacher(){
+    $('classList').innerHTML = state.students.map(s => 
+      `<div class="row">
+        <b>${esc(s.name)}</b>
+        <span style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${s.house ? houses[s.house] : 'Non assegnata'}</span>
+        <span>${s.points || 0} pt</span>
+        <button type="button" class="btn remove" data-id="${s.id}">Rimuovi</button>
+      </div>`
+    ).join('') || 'Nessuno studente inserito.';
 
-            sortedStudents.forEach(student => {
-                const pts = calculateStudentPoints(student);
-                const houseTag = getHouseTag(student.house);
-                
-                const row = document.createElement('div');
-                row.className = 'row';
-                row.innerHTML = `
-                    <div class="student-info">
-                        <span class="student-name">${esc(student.name)}</span>
-                        ${houseTag}
-                    </div>
-                    <div class="student-stats">
-                        <span>Voti: <b>${student.grades ? student.grades.length : 0}</b></span>
-                        <span class="badge-points">${pts > 0 ? '+' : ''}${pts.toFixed(1)} pt</span>
-                        <button class="btn" style="padding: 4px 10px; font-size: 11px;" onclick="openHistory('${student.id}')">📜 Storico</button>
-                        ${state.isTeacherMode ? `<button class="btn danger" style="padding: 4px 8px; font-size: 11px;" onclick="deleteStudent('${student.id}')">🗑️</button>` : ''}
-                    </div>
-                `;
-                studentList.appendChild(row);
-            });
-        }
+    $('pointsStudent').innerHTML = state.students
+      .filter(s => s.house)
+      .map(s => `<option value="${s.id}">${esc(s.name)} — ${houses[s.house]}</option>`)
+      .join('');
 
-        function getHouseName(code) {
-            switch(code) {
-                case 'g': return 'Grifondoro';
-                case 't': return 'Tassorosso';
-                case 'r': return 'Corvonero';
-                case 's': return 'Serpeverde';
-                default: return 'Non Assegnato';
-            }
-        }
+    $('sortBtn').disabled = !state.students.length || state.students.every(s => s.house);
+    history();
+  }
 
-        function getHouseTag(code) {
-            switch(code) {
-                case 'g': return '<span class="student-house-tag tag-g">Grifondoro</span>';
-                case 't': return '<span class="student-house-tag tag-t">Tassorosso</span>';
-                case 'r': return '<span class="student-house-tag tag-r">Corvonero</span>';
-                case 's': return '<span class="student-house-tag tag-s">Serpeverde</span>';
-                default: return '<span class="student-house-tag" style="background:#333; color:#aaa;">Da Smistare</span>';
-            }
-        }
+  function history(){
+    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value));
+    $('gradeHistory').innerHTML = s ? 
+      `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
+      ((s.history || []).slice().reverse().map(h => 
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
+          <span>Voto ${h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
+          <button type="button" class="del" data-id="${h.id}" title="Rimuovi voto" style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
+        </div>`
+      ).join('') || '<div>Nessun voto registrato.</div>') : '';
+  }
 
-        // Autenticazione Docente
-        btnToggleAuth.addEventListener('click', () => {
-            authBox.classList.toggle('active');
-        });
+  function setRole(r){
+    role = r;
+    let t = r === 'teacher';
+    $('teacherControls').style.display = t ? 'flex' : 'none';
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    $('authBox').style.display = 'none';
+    $('roleStatus').textContent = t ? 'Modalità docente — puoi modificare il torneo' : 'Modalità studente — sola consultazione';
+    render();
+  }
 
-        function handleLogin() {
-            const email = authEmail.value.trim();
-            const pass = authPass.value.trim();
+  // Event Listeners
+  $('teacherMode').onclick = () => {
+    if(role !== 'teacher'){
+      $('authBox').style.display = 'grid';
+      $('email').focus();
+    }
+  };
 
-            if (email === 'docente@hogwarts.it' && pass === 'Newton2026') {
-                state.isTeacherMode = true;
-                authEmail.value = '';
-                authPass.value = '';
-                showMessage('🔑 Accesso docente effettuato con successo!');
-                renderUI();
-            } else {
-                showMessage('❌ Credenziali errate. Riprova.');
-            }
-        }
+  $('studentMode').onclick = () => setRole('student');
 
-        btnLogin.addEventListener('click', handleLogin);
+  $('loginBtn').onclick = () => {
+    if($('email').value.trim() === 'docente@hogwarts.it' && $('password').value === 'Newton2026') {
+      setRole('teacher');
+    } else {
+      $('authMessage').textContent = 'Credenziali non valide.';
+    }
+  };
 
-        // INVIO nel campo Password -> Effettua Login
-        authPass.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') handleLogin();
-        });
+  $('password').onkeydown = e => {
+    if(e.key === 'Enter') $('loginBtn').click();
+  };
 
-        btnLogout.addEventListener('click', () => {
-            state.isTeacherMode = false;
-            showMessage('🚪 Logout effettuato.');
-            renderUI();
-        });
+  $('logoutBtn').onclick = () => setRole('student');
 
-        // Aggiunta Studente
-        function addStudent() {
-            const name = studentName.value.trim();
-            const house = studentHouse.value;
+  $('manageBtn').onclick = () => {
+    $('classCard').style.display = $('classCard').style.display === 'block' ? 'none' : 'block';
+    if($('classCard').style.display === 'block') $('classCard').scrollIntoView({ behavior: 'smooth' });
+  };
 
-            if (!name) {
-                showMessage('⚠️ Inserisci il nome dello studente.');
-                return;
-            }
+  $('pointsBtn').onclick = () => {
+    $('pointsCard').style.display = $('pointsCard').style.display === 'block' ? 'none' : 'block';
+    if($('pointsCard').style.display === 'block'){
+      $('pointsCard').scrollIntoView({ behavior: 'smooth' });
+      history();
+    }
+  };
 
-            const newStudent = {
-                id: Date.now().toString(),
-                name: name,
-                house: house,
-                grades: []
-            };
+  const addStudentAction = () => {
+    let n = $('studentName').value.trim();
+    if(!n) return;
+    state.students.push({ id: state.nextId++, name: n, house: null, points: 0, history: [] });
+    $('studentName').value = '';
+    save();
+    render();
+  };
 
-            state.students.push(newStudent);
-            saveState();
-            studentName.value = '';
-            showMessage(`✨ Studente ${name} aggiunto al torneo!`);
-            renderUI();
-        }
+  $('addStudent').onclick = addStudentAction;
 
-        btnAddStudent.addEventListener('click', addStudent);
+  $('studentName').onkeydown = e => {
+    if(e.key === 'Enter') {
+      e.preventDefault();
+      addStudentAction();
+    }
+  };
 
-        // REQUISITO: INVIO nel campo Nome Studente -> Aggiunge Studente
-        studentName.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') addStudent();
-        });
+  $('classList').onclick = e => {
+    let b = e.target.closest('.remove');
+    if(b && confirm('Rimuovere questo studente?')){
+      state.students = state.students.filter(s => String(s.id) !== b.dataset.id);
+      save();
+      render();
+    }
+  };
 
-        // REQUISITO SPECIFICO: Registrazione Voto + Mantenimento Studente Selezionato
-        function addGrade() {
-            const studentId = gradeStudentSelect.value;
-            const val = parseFloat(gradeInput.value);
+  $('sortBtn').onclick = () => {
+    let u = state.students.filter(s => !s.house);
+    if(!u.length){
+      $('result').textContent = 'Tutti gli studenti sono già stati assegnati a una Casata.';
+      $('modal').classList.add('open');
+      return;
+    }
+    let k = Object.keys(houses),
+        a = [...u].sort(() => Math.random() - .5),
+        o = [...k].sort(() => Math.random() - .5),
+        base = Math.floor(a.length / 4),
+        extra = a.length % 4,
+        i = 0;
 
-            if (!studentId) {
-                showMessage('⚠️ Seleziona uno studente prima di registrare il voto.');
-                return;
-            }
+    o.forEach((h, n) => {
+      for(let j = 0; j < base + (n < extra ? 1 : 0); j++) {
+        a[i++].house = h;
+      }
+    });
 
-            if (isNaN(val) || val < 0 || val > 10) {
-                showMessage('⚠️ Inserisci un voto valido compreso tra 0 e 10.');
-                return;
-            }
+    save();
+    render();
+    $('result').innerHTML = '<strong>🎩 Smistamento completato!</strong><br><br>' +
+      o.map(h => houses[h] + ': ' + state.students.filter(s => s.house === h).length + ' studenti').join('<br>');
+    $('modal').classList.add('open');
+  };
 
-            const student = state.students.find(s => s.id === studentId);
-            if (student) {
-                if (!student.grades) student.grades = [];
-                student.grades.push(val);
-                saveState();
+  $('close').onclick = () => $('modal').classList.remove('open');
+  $('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('open'); };
 
-                const ptsAdded = (val - 6).toFixed(1);
-                showMessage(`🎯 Registrato voto ${val} per ${student.name} (${ptsAdded >= 0 ? '+' : ''}${ptsAdded} punti)`);
+  $('resetBtn').onclick = () => {
+    if(confirm('Azzera smistamenti, voti e punteggi?')){
+      state.students.forEach(s => {
+        s.house = null;
+        s.points = 0;
+        s.history = [];
+      });
+      save();
+      render();
+    }
+  };
 
-                // RIPRISTINO & FOCUS: Puliamo l'input del voto ma MANTENIAMO la selezione dello studente
-                gradeInput.value = '';
-                
-                // Aggiorniamo la UI (la funzione renderUI ripristina gradeStudentSelect.value = studentId)
-                renderUI();
+  $('pointsStudent').onchange = history;
 
-                // Assicuriamo il focus immediato sul campo voto per l'inserimento successivo
-                gradeInput.focus();
-            }
-        }
+  $('gradeInput').oninput = () => {
+    let v = parseFloat($('gradeInput').value);
+    $('pointPreview').textContent = Number.isFinite(v) && v >= 1 && v <= 10 ?
+      'Voto ' + v + ' → ' + (score(v) >= 0 ? '+' : '') + score(v) + ' punti' :
+      'Inserisci un voto da 1 a 10.';
+  };
 
-        btnAddGrade.addEventListener('click', addGrade);
+  const saveGradeAction = () => {
+    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
+        v = parseFloat($('gradeInput').value);
+    if(!s || !Number.isFinite(v) || v < 1 || v > 10){
+      alert('Seleziona uno studente e inserisci un voto valido.');
+      return;
+    }
+    let p = score(v);
+    s.points += p;
+    s.history.push({ id: Date.now(), grade: v, points: p });
+    $('gradeInput').value = '';
+    save();
+    render();
+  };
 
-        // REQUISITO SPECIFICO: INVIO nel campo Voto -> Registra Voto e RIMANE sullo stesso studente
-        gradeInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                addGrade();
-            }
-        });
+  $('saveGrade').onclick = saveGradeAction;
 
-        // Cappello Parlante (Smistamento Equilibrato)
-        btnHat.addEventListener('click', () => {
-            const unassigned = state.students.filter(s => s.house === 'unassigned');
-            if (unassigned.length === 0) {
-                showMessage('🎩 Tutti gli studenti sono già stati smistati!');
-                return;
-            }
+  $('gradeInput').onkeydown = e => {
+    if(e.key === 'Enter') {
+      e.preventDefault();
+      saveGradeAction();
+    }
+  };
 
-            const houses = ['g', 't', 'r', 's'];
-            
-            unassigned.forEach(s => {
-                // Scegli la casata con il minor numero di componenti attuale per bilanciamento
-                const counts = { g: 0, t: 0, r: 0, s: 0 };
-                state.students.forEach(st => { if (counts[st.house] !== undefined) counts[st.house]++; });
-                
-                let minHouse = houses[0];
-                houses.forEach(h => {
-                    if (counts[h] < counts[minHouse]) minHouse = h;
-                });
+  $('gradeHistory').onclick = e => {
+    let b = e.target.closest('.del');
+    if(!b) return;
+    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
+        i = s.history.findIndex(h => String(h.id) === b.dataset.id);
+    if(i >= 0 && confirm('Rimuovere questo voto?')){
+      s.points -= s.history[i].points;
+      s.history.splice(i, 1);
+      save();
+      render();
+    }
+  };
 
-                s.house = minHouse;
-            });
-
-            saveState();
-            showMessage(`🎩 Il Cappello Parlante ha smistato ${unassigned.length} studenti!`);
-            renderUI();
-        });
-
-        // Eliminazione Studente
-        window.deleteStudent = function(id) {
-            if (confirm('Sei sicuro di voler rimuovere questo studente dal Torneo?')) {
-                state.students = state.students.filter(s => s.id !== id);
-                saveState();
-                showMessage('🗑️ Studente rimosso.');
-                renderUI();
-            }
-        };
-
-        window.openHistory = function(studentId) {
-            const student = state.students.find(s => s.id === studentId);
-            if (!student) return;
-
-            modalStudentName.textContent = `Storico Voti: ${student.name}`;
-            
-            if (!student.grades || student.grades.length === 0) {
-                modalBody.innerHTML = '<div style="text-align:center; color:var(--muted); padding:20px;">Nessun voto registrato.</div>';
-            } else {
-                let html = '<div class="list">';
-                student.grades.forEach((g, idx) => {
-                    const pts = (g - 6).toFixed(1);
-                    html += `
-                        <div class="grade-item">
-                            <span>Voto: <b>${g}</b></span>
-                            <span>Punti Casata: <b style="color:var(--gold);">${pts >= 0 ? '+' : ''}${pts}</b></span>
-                            ${state.isTeacherMode ? `<button class="btn danger" style="padding:2px 6px; font-size:10px;" onclick="deleteGrade('${student.id}', ${idx})">Rimuovi</button>` : ''}
-                        </div>
-                    `;
-                });
-                html += '</div>';
-                modalBody.innerHTML = html;
-            }
-
-            modalHistory.classList.add('open');
-        };
-
-        window.deleteGrade = function(studentId, gradeIndex) {
-            const student = state.students.find(s => s.id === studentId);
-            if (student && student.grades) {
-                student.grades.splice(gradeIndex, 1);
-                saveState();
-                renderUI();
-                openHistory(studentId); // Riapre/Aggiorna la modale
-            }
-        };
-
-        btnCloseModal.addEventListener('click', () => {
-            modalHistory.classList.remove('open');
-        });
-
-        // Chiudi modal cliccando sullo sfondo nero
-        modalHistory.addEventListener('click', (e) => {
-            if (e.target === modalHistory) modalHistory.classList.remove('open');
-        });
-
-        // Inizializzazione Applicazione
-        window.onload = function() {
-            renderUI();
-        };
-    </script>
+  setRole('student');
+})();
+</script>
 </body>
 </html>
