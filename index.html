@@ -309,7 +309,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     <button type="button" class="btn" id="logoutBtn">Esci</button>
   </div>
 
-  <!-- MENU NAVIGAZIONE -->
+  <!-- MENU NAVIGAZIONE ESTETICO -->
   <nav class="card" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px" aria-label="Sezioni">
     <a class="btn" href="#houses" style="text-decoration:none">🦁 Le Casate</a>
     <a class="btn" href="#ranking" style="text-decoration:none">🏆 Classifica</a>
@@ -334,7 +334,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   <section class="card" id="classCard" style="display:none">
     <h3>Gestione classe</h3>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-      <input id="studentName" placeholder="Nome e cognome" style="flex:1;min-width:220px;">
+      <input id="studentName" placeholder="Nome e cognome (premi Invio)" style="flex:1;min-width:220px;">
       <button type="button" class="btn primary" id="addStudent">＋ Aggiungi studente</button>
     </div>
     <div id="classList" class="list"></div>
@@ -348,7 +348,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
         <select id="pointsStudent" style="width:100%;margin-top:5px;"></select>
       </label>
       <label style="font-family:system-ui,sans-serif">Voto
-        <input id="gradeInput" type="number" min="1" max="10" step="0.5" placeholder="es. 8,5" style="width:100%;margin-top:5px;">
+        <input id="gradeInput" type="number" min="1" max="10" step="0.5" placeholder="es. 8,5 (premi Invio)" style="width:100%;margin-top:5px;">
       </label>
       <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div>
       <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
@@ -358,7 +358,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
 
   <!-- REGOLAMENTO -->
   <section class="card" id="instructions">
-    <h3>Come funziona</h3>
+    <h3>Come funciona</h3>
     <div class="instructions">
       <div class="step"><b>🎩 Cappello Parlante</b>Distribuisce casualmente gli studenti in modo equilibrato fra le quattro Casate.</div>
       <div class="step"><b>🏆 Classifica</b>Il punteggio complessivo della Casata è dato dalla somma dei punti dei singoli studenti.</div>
@@ -390,7 +390,6 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   let role = 'student';
   let state;
 
-  // Caricamento da localStorage
   try {
     state = JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 };
   } catch(e) {
@@ -401,7 +400,6 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   const save = () => localStorage.setItem(KEY, JSON.stringify(state));
   const score = v => Number((v - 6).toFixed(2));
   
-  // Sanitizzazione XSS
   const esc = s => String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
@@ -508,13 +506,22 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     }
   };
 
-  $('addStudent').onclick = () => {
+  const addStudentAction = () => {
     let n = $('studentName').value.trim();
     if(!n) return;
     state.students.push({ id: state.nextId++, name: n, house: null, points: 0, history: [] });
     $('studentName').value = '';
     save();
     render();
+  };
+
+  $('addStudent').onclick = addStudentAction;
+
+  $('studentName').onkeydown = e => {
+    if(e.key === 'Enter') {
+      e.preventDefault();
+      addStudentAction();
+    }
   };
 
   $('classList').onclick = e => {
@@ -577,7 +584,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       'Inserisci un voto da 1 a 10.';
   };
 
-  $('saveGrade').onclick = () => {
+  const saveGradeAction = () => {
     let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
         v = parseFloat($('gradeInput').value);
     if(!s || !Number.isFinite(v) || v < 1 || v > 10){
@@ -590,6 +597,15 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     $('gradeInput').value = '';
     save();
     render();
+  };
+
+  $('saveGrade').onclick = saveGradeAction;
+
+  $('gradeInput').onkeydown = e => {
+    if(e.key === 'Enter') {
+      e.preventDefault();
+      saveGradeAction();
+    }
   };
 
   $('gradeHistory').onclick = e => {
@@ -605,7 +621,6 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     }
   };
 
-  // Inizializzazione in modalità studente (sola lettura)
   setRole('student');
 })();
 </script>
