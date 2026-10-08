@@ -30,7 +30,11 @@ footer{text-align:center;color:#817b70;font:12px system-ui,sans-serif;padding:22
 </header>
 <main>
 <p class="intro">Benvenuti nella Sala Grande. Qui comincia la sfida: assegna gli studenti alle Casate, conquista punti e porta la tua squadra in cima alla classifica.</p>
-<div class="controls"><button class="btn primary" id="sortBtn">🎩 Cappello Parlante</button><button class="btn" id="manageBtn">👥 Studenti</button><button class="btn" id="pointsBtn">🏆 Gestisci punti</button><button class="btn" id="resetBtn">↺ Azzera</button></div>
+<section class="card" style="margin-top:0"><h3>Accesso</h3><p style="color:#c7c0ae;font-family:system-ui,sans-serif">Scegli l'interfaccia da utilizzare. L'interfaccia studente è in sola lettura.</p><div class="controls" style="margin:12px 0 0"><button class="btn primary" id="teacherMode">👨‍🏫 Area docente</button><button class="btn" id="studentMode">🎓 Area studente</button></div><div id="roleStatus" style="text-align:center;margin-top:12px;color:var(--gold);font-family:system-ui,sans-serif">Modalità docente</div></section>
+<div class="controls" id="teacherControls"><button class="btn primary" id="sortBtn">🎩 Cappello Parlante</button><button class="btn" id="manageBtn">👥 Gestisci studenti</button><button class="btn" id="pointsBtn">🏆 Gestisci punti</button><button class="btn" id="resetBtn">↺ Azzera</button></div>
+<nav class="card" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px" aria-label="Sezioni">
+<a class="btn" href="#houses" style="text-decoration:none">🦁 Le Casate</a><a class="btn" href="#ranking" style="text-decoration:none">🏆 Classifica</a><a class="btn" href="#instructions" style="text-decoration:none">📜 Regolamento</a>
+</nav>
 <section class="grid" id="houses">
 <article class="house g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
 <article class="house t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
@@ -38,7 +42,8 @@ footer{text-align:center;color:#817b70;font:12px system-ui,sans-serif;padding:22
 <article class="house s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
 </section>
 <section class="card"><h3>Classifica delle Casate</h3><div id="ranking" style="display:grid;gap:8px;font-family:system-ui,sans-serif"></div></section>
-<section class="card"><h3>Come funziona</h3><div class="instructions"><div class="step"><b>1 · Cappello Parlante</b>Seleziona uno studente e assegnalo a una delle quattro Casate.</div><div class="step"><b>2 · Classifica</b>Ogni assegnazione e ogni punto aggiornano automaticamente la situazione.</div><div class="step"><b>3 · Torneo</b>Durante l'anno puoi premiare o penalizzare le Casate con il pannello dei punti.</div></div></section>
+<section class="card" id="studentView" style="display:none"><h3>Area studente</h3><p style="color:#c7c0ae;font-family:system-ui,sans-serif">Qui puoi consultare la situazione del torneo. Non puoi modificare punti, assegnazioni o impostazioni.</p><div id="studentRanking" style="display:grid;gap:8px;font-family:system-ui,sans-serif"></div></section>
+<section class="card" id="instructions"><h3>Come funziona</h3><div class="instructions"><div class="step"><b>1 · Cappello Parlante</b>Seleziona uno studente e assegnalo a una delle quattro Casate.</div><div class="step"><b>2 · Classifica</b>Ogni assegnazione e ogni punto aggiornano automaticamente la situazione.</div><div class="step"><b>3 · Torneo</b>Durante l'anno puoi premiare o penalizzare le Casate con il pannello dei punti.</div></div></section>
 <footer>Pagina Hogwarts · prototipo interattivo per uso didattico</footer>
 </main>
 <div class="modal" id="modal"><div class="dialog"><button class="close" id="close">×</button><h2>Il Cappello Parlante</h2><p style="color:#c7c0ae">Scegli uno studente per iniziare l'assegnazione.</p><div class="student-list" id="students"></div><div id="result" style="margin-top:20px;font-size:20px;color:var(--gold);text-align:center"></div></div></div>
@@ -46,12 +51,17 @@ footer{text-align:center;color:#817b70;font:12px system-ui,sans-serif;padding:22
 <script>
 const names=['Studente 1','Studente 2','Studente 3','Studente 4','Studente 5','Studente 6'];
 const houses={g:'Grifondoro',t:'Tassorosso',r:'Corvonero',s:'Serpeverde'};let points={g:0,t:0,r:0,s:0};
-const modal=document.getElementById('modal'),list=document.getElementById('students'),result=document.getElementById('result'),ranking=document.getElementById('ranking');
-function render(){Object.keys(points).forEach(k=>document.querySelector(`[data-house="${k}"]`).textContent=points[k]+' punti');ranking.innerHTML=Object.entries(points).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>`<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><strong>${v} punti</strong></div>`).join('')}
+const modal=document.getElementById('modal'),list=document.getElementById('students'),result=document.getElementById('result'),ranking=document.getElementById('ranking'),studentRanking=document.getElementById('studentRanking'),teacherControls=document.getElementById('teacherControls'),studentView=document.getElementById('studentView'),roleStatus=document.getElementById('roleStatus');
+let role='teacher';
+function render(){Object.keys(points).forEach(k=>document.querySelector(`[data-house="${k}"]`).textContent=points[k]+' punti');const html=Object.entries(points).sort((a,b)=>b[1]-a[1]).map(([k,v],i)=>`<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><strong>${v} punti</strong></div>`).join('');ranking.innerHTML=html;studentRanking.innerHTML=html}
+function setRole(next){role=next;const teacher=next==='teacher';teacherControls.style.display=teacher?'flex':'none';studentView.style.display=teacher?'none':'block';roleStatus.textContent=teacher?'Modalità docente — puoi modificare il torneo':'Modalità studente — sola consultazione';document.getElementById('sortBtn').disabled=!teacher}
 names.forEach(n=>{const b=document.createElement('button');b.className='student';b.textContent=n;b.onclick=()=>{const keys=Object.keys(houses),k=keys[Math.floor(Math.random()*keys.length)];points[k]+=10;render();result.textContent=`${n} è stato assegnato a ${houses[k]}!`;document.querySelectorAll('.student').forEach(x=>x.classList.remove('selected'));b.classList.add('selected')};list.appendChild(b)});
 document.getElementById('sortBtn').onclick=()=>{modal.classList.add('open');result.textContent=''};document.getElementById('close').onclick=()=>modal.classList.remove('open');modal.onclick=e=>{if(e.target===modal)modal.classList.remove('open')};document.getElementById('resetBtn').onclick=()=>{points={g:0,t:0,r:0,s:0};render();result.textContent=''};
 document.getElementById('manageBtn').onclick=()=>{modal.classList.add('open');result.textContent='Elenco studenti';};
 document.getElementById('pointsBtn').onclick=()=>{const k=prompt('Casata (g=Grifondoro, t=Tassorosso, r=Corvonero, s=Serpeverde):');if(houses[k]){const n=parseInt(prompt('Quanti punti vuoi aggiungere?'),10);if(Number.isFinite(n)){points[k]+=n;render()}}};
+document.getElementById('teacherMode').onclick=()=>setRole('teacher');
+document.getElementById('studentMode').onclick=()=>{modal.classList.remove('open');setRole('student')};
+setRole('teacher');
 render();
 </script>
 </body></html>
