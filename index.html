@@ -121,6 +121,7 @@ main {
   cursor: pointer;
 }
 .btn:hover { background: #262936; }
+.btn:disabled { opacity: .6; cursor: wait; }
 .btn.primary { background: var(--gold); color: #15120c; }
 
 .authbox {
@@ -285,13 +286,9 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   
   <!-- ACCESSO -->
   <section class="card" style="margin-top:0">
-    <h3>Accesso</h3>
-    <p style="color:#c7c0ae;font-family:system-ui,sans-serif">L'area studente è disponibile in sola lettura. L'area docente richiede autenticazione.</p>
-    <div class="controls" style="margin:12px 0 0">
-      <button type="button" class="btn" id="teacherMode">👨‍🏫 Area docente</button>
-      <button type="button" class="btn primary" id="studentMode">🎓 Area studente</button>
+    <div class="controls" style="margin:0">
+      <button type="button" class="btn primary" id="teacherMode">👨‍🏫 Accesso docente</button>
     </div>
-    <div id="roleStatus" class="message">Modalità studente — sola consultazione</div>
     <div id="authBox" class="authbox">
       <input id="email" type="email" placeholder="Email docente">
       <input id="password" type="password" placeholder="Password">
@@ -306,6 +303,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
     <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
     <button type="button" class="btn" id="resetBtn">↺ Azzera</button>
+    <button type="button" class="btn" id="exportBtn">⇩ Esporta dati</button>
     <button type="button" class="btn" id="logoutBtn">Esci</button>
   </div>
 
@@ -313,7 +311,6 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   <nav class="card" style="display:flex;justify-content:center;gap:10px;flex-wrap:wrap;padding:14px" aria-label="Sezioni">
     <a class="btn" href="#houses" style="text-decoration:none">🦁 Le Casate</a>
     <a class="btn" href="#ranking" style="text-decoration:none">🏆 Classifica</a>
-    <a class="btn" href="#instructions" style="text-decoration:none">📜 Regolamento</a>
   </nav>
 
   <!-- LE CASATE -->
@@ -356,16 +353,6 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     <div id="gradeHistory" class="list" style="margin-top:18px"></div>
   </section>
 
-  <!-- REGOLAMENTO -->
-  <section class="card" id="instructions">
-    <h3>Come funciona</h3>
-    <div class="instructions">
-      <div class="step"><b>🎩 Cappello Parlante</b>Distribuisce casualmente gli studenti in modo equilibrato fra le quattro Casate.</div>
-      <div class="step"><b>🏆 Classifica</b>Il punteggio complessivo della Casata è dato dalla somma dei punti dei singoli studenti.</div>
-      <div class="step"><b>📈 Voti e Punti</b>Ogni voto inserito produce automaticamente <strong>voto − 6</strong> punti.</div>
-    </div>
-  </section>
-
   <footer>Pagina Hogwarts · prototipo interattivo per uso didattico</footer>
 </main>
 
@@ -389,6 +376,8 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
 
   let role = 'student';
   let state;
+  let failedLogins = 0;
+  let loginBusy = false;
 
   try {
     state = JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 };
@@ -428,6 +417,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   }
 
   function renderTeacher(){
+    const previouslySelected = $('pointsStudent').value;
     $('classList').innerHTML = state.students.map(s => 
       `<div class="row">
         <b>${esc(s.name)}</b>
@@ -441,6 +431,9 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       .filter(s => s.house)
       .map(s => `<option value="${s.id}">${esc(s.name)} — ${houses[s.house]}</option>`)
       .join('');
+    if ([...$('pointsStudent').options].some(o => o.value === previouslySelected)) {
+      $('pointsStudent').value = previouslySelected;
+    }
 
     $('sortBtn').disabled = !state.students.length || state.students.every(s => s.house);
     history();
@@ -460,12 +453,17 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
 
   function setRole(r){
     role = r;
-    let t = r === 'teacher';
-    $('teacherControls').style.display = t ? 'flex' : 'none';
+    const isTeacher = r === 'teacher';
+    $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
+    $('teacherMode').style.display = isTeacher ? 'none' : 'inline-block';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
     $('authBox').style.display = 'none';
-    $('roleStatus').textContent = t ? 'Modalità docente — puoi modificare il torneo' : 'Modalità studente — sola consultazione';
+    $('email').value = '';
+    $('password').value = '';
+    $('authMessage').textContent = '';
+    $('loginBtn').disabled = false;
+    loginBusy = false;
     render();
   }
 
@@ -477,13 +475,45 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     }
   };
 
-  $('studentMode').onclick = () => setRole('student');
-
-  $('loginBtn').onclick = () => {
-    if($('email').value.trim() === 'docente@hogwarts.it' && $('password').value === 'Newton2026') {
-      setRole('teacher');
-    } else {
-      $('authMessage').textContent = 'Credenziali non valide.';
+  $('loginBtn').onclick = async () => {
+    if (loginBusy) return;
+    const email = $('email').value.trim().toLowerCase();
+    const password = $('password').value;
+    if (!email || !password) {
+      $('authMessage').textContent = 'Inserisci email e password.';
+      return;
+    }
+    if (!window.crypto || !window.crypto.subtle) {
+      $('authMessage').textContent = 'Il browser non consente la verifica sicura. Apri la pagina con un browser aggiornato.';
+      return;
+    }
+    loginBusy = true;
+    $('loginBtn').disabled = true;
+    $('authMessage').textContent = 'Verifica in corso…';
+    try {
+      const payload = new TextEncoder().encode('hogwarts:' + email + ':' + password);
+      const digest = await window.crypto.subtle.digest('SHA-256', payload);
+      const hash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
+      // Confronto con il digest SHA-256 della credenziale docente configurata.
+      const valid = email === 'docente@hogwarts.it' && hash === '903a98bf432b5b7277daf84d836e6ec5bc89ac13cde117c460f75e6685c84ec7';
+      if (valid) {
+        failedLogins = 0;
+        setRole('teacher');
+      } else {
+        failedLogins++;
+        $('authMessage').textContent = 'Credenziali non valide.';
+        $('password').value = '';
+        if (failedLogins >= 3) {
+          $('authMessage').textContent = 'Troppi tentativi. Attendi qualche secondo e riprova.';
+          await new Promise(resolve => setTimeout(resolve, 2500));
+          failedLogins = 0;
+        }
+      }
+    } catch (err) {
+      $('authMessage').textContent = 'Non è stato possibile verificare le credenziali. Riprova.';
+    } finally {
+      loginBusy = false;
+      $('loginBtn').disabled = false;
     }
   };
 
@@ -540,18 +570,18 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       $('modal').classList.add('open');
       return;
     }
-    let k = Object.keys(houses),
-        a = [...u].sort(() => Math.random() - .5),
-        o = [...k].sort(() => Math.random() - .5),
-        base = Math.floor(a.length / 4),
-        extra = a.length % 4,
-        i = 0;
-
-    o.forEach((h, n) => {
-      for(let j = 0; j < base + (n < extra ? 1 : 0); j++) {
-        a[i++].house = h;
-      }
+    const k = Object.keys(houses);
+    const a = [...u].sort(() => Math.random() - .5);
+    // Conteggio iniziale: gli studenti già smistati non vengono mai spostati.
+    const counts = Object.fromEntries(k.map(h => [h, state.students.filter(s => s.house === h).length]));
+    a.forEach(student => {
+      const minimum = Math.min(...k.map(h => counts[h]));
+      const candidates = k.filter(h => counts[h] === minimum);
+      const chosen = candidates[Math.floor(Math.random() * candidates.length)];
+      student.house = chosen;
+      counts[chosen]++;
     });
+    const o = [...k].sort((x, y) => counts[y] - counts[x]);
 
     save();
     render();
@@ -575,6 +605,28 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     }
   };
 
+  $('exportBtn').onclick = () => {
+    try {
+      const backup = {
+        format: 'hogwarts-torneo-backup',
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        state
+      };
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'hogwarts-backup-' + new Date().toISOString().slice(0, 10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (err) {
+      alert('Esportazione non riuscita. Riprova con un browser aggiornato.');
+    }
+  };
+
   $('pointsStudent').onchange = history;
 
   $('gradeInput').oninput = () => {
@@ -594,9 +646,12 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     let p = score(v);
     s.points += p;
     s.history.push({ id: Date.now(), grade: v, points: p });
+    const studentId = String(s.id);
     $('gradeInput').value = '';
     save();
     render();
+    $('pointsStudent').value = studentId;
+    history();
   };
 
   $('saveGrade').onclick = saveGradeAction;
