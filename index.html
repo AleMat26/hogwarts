@@ -25,6 +25,18 @@ html, body {
 body {
   background: radial-gradient(circle at 50% 0%, #26314c 0, #101522 38%, #070910 78%);
 }
+/* Ingresso nella Sala Grande: animazione discreta, senza interferire con i controlli. */
+@keyframes grandEntrance {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+header { animation: grandEntrance .8s ease-out both; }
+main > * { animation: grandEntrance .65s ease-out both; }
+main > *:nth-child(2) { animation-delay: .08s; }
+main > *:nth-child(3) { animation-delay: .14s; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
+}
 #app {
   min-height: 100vh;
   background: linear-gradient(180deg, rgba(7,9,16,.12), rgba(7,9,16,.78));
@@ -213,7 +225,7 @@ main {
 .list { display: grid; gap: 8px; font-family: system-ui, sans-serif; }
 .row {
   display: grid;
-  grid-template-columns: 1fr 160px 60px auto;
+  grid-template-columns: minmax(150px, 1fr) 160px 60px auto auto;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -235,6 +247,9 @@ main {
   line-height: 1.5;
 }
 .step b { color: #fff; display: block; margin-bottom: 5px; }
+.btn.encomio { padding: 7px 10px; color: #f0d58a; border-color: #8a713b; white-space: nowrap; }
+.cup-leader { border-color: var(--gold) !important; background: linear-gradient(100deg, #332a18, #171923) !important; }
+.cup-label { color: var(--gold); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-left: 8px; }
 
 .modal {
   position: fixed;
@@ -335,7 +350,8 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
 
   <!-- CLASSIFICA -->
   <section class="card" id="ranking">
-    <h3>Classifica delle Casate</h3>
+    <h3>🏆 Coppa delle Case</h3>
+    <p style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La classifica aggiornata delle quattro Casate.</p>
     <div id="rankingList" class="list"></div>
   </section>
 
@@ -421,9 +437,10 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       if(el) el.textContent = t[k] + ' punti';
     });
 
-    $('rankingList').innerHTML = Object.entries(t)
-      .sort((a,b) => b[1] - a[1])
-      .map(([k, v], i) => `<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><b>${v} punti</b></div>`)
+    const ranked = Object.entries(t).sort((a,b) => b[1] - a[1]);
+    const topScore = ranked[0]?.[1] ?? 0;
+    $('rankingList').innerHTML = ranked
+      .map(([k, v], i) => `<div class="${i === 0 && topScore > 0 ? 'cup-leader' : ''}" style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i === 0 && topScore > 0 ? '🏆 ' : ''}${i+1}. ${houses[k]}${i === 0 && topScore > 0 ? '<span class="cup-label">In testa</span>' : ''}</span><b>${v} punti</b></div>`)
       .join('');
 
     document.querySelectorAll('.house').forEach(card => {
@@ -466,7 +483,8 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
         <b>${esc(s.name)}</b>
         <span style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${s.house ? houses[s.house] : 'Non assegnata'}</span>
         <span>${s.points || 0} pt</span>
-        <button type="button" class="btn remove" data-id="${s.id}">Rimuovi</button>
+        <button type="button" class="btn encomio" data-encomio="${s.id}" title="Assegna un punto per encomio speciale" ${s.house ? '' : 'disabled'}>＋1 Encomio</button>
+        <button type="button" class="btn remove" data-id="${s.id}">🗑️</button>
       </div>`
     ).join('') || 'Nessuno studente inserito.';
 
@@ -488,7 +506,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
       ((s.history || []).slice().reverse().map(h => 
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>Voto ${h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
+          <span>${h.type === 'encomio' ? 'Encomio speciale' : 'Voto ' + h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
           <button type="button" class="del" data-id="${h.id}" title="Rimuovi voto" style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
         </div>`
       ).join('') || '<div>Nessun voto registrato.</div>') : '';
@@ -617,7 +635,18 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   };
 
   $('classList').onclick = e => {
-    let b = e.target.closest('.remove');
+    const encomio = e.target.closest('[data-encomio]');
+    if (encomio) {
+      const student = state.students.find(s => String(s.id) === encomio.dataset.encomio);
+      if (!student || !student.house) return;
+      student.points = (student.points || 0) + 1;
+      student.history = student.history || [];
+      student.history.push({ id: Date.now(), type: 'encomio', grade: null, points: 1 });
+      save();
+      render();
+      return;
+    }
+    const b = e.target.closest('.remove');
     if(b && confirm('Rimuovere questo studente?')){
       state.students = state.students.filter(s => String(s.id) !== b.dataset.id);
       save();
