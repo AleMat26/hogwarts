@@ -390,6 +390,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   let state;
   let failedLogins = 0;
   let loginBusy = false;
+  let selectedHouse = null;
 
   try {
     state = JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 };
