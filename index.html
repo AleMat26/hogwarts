@@ -164,6 +164,12 @@ main {
   transform: translateY(-5px);
   border-color: var(--gold);
 }
+.house.clickable { cursor: pointer; }
+.house.clickable:focus-visible { outline: 2px solid var(--gold); outline-offset: 4px; }
+.house.selected { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), 0 8px 28px #0006; }
+.house-students-empty { color: var(--muted); font-family: system-ui, sans-serif; }
+.house-student-line { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid #3f3b32; border-radius:10px; font-family:system-ui,sans-serif; }
+.house-student-line span:last-child { color:var(--gold); white-space:nowrap; }
 .house:after {
   content: '';
   position: absolute;
@@ -315,10 +321,16 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
 
   <!-- LE CASATE -->
   <section class="grid" id="houses">
-    <article class="house g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
-    <article class="house t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
-    <article class="house r"><div class="sigil">🦅</div><h2>Corvonero</h2><p>Curiosità, ingegno e amore per la conoscenza.</p><div class="points" data-house="r">0 punti</div></article>
-    <article class="house s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
+    <article class="house g" data-house-card="g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
+    <article class="house t" data-house-card="t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
+    <article class="house r" data-house-card="r"><div class="sigil">🦅</div><h2>Corvonero</h2><p>Curiosità, ingegno e amore per la conoscenza.</p><div class="points" data-house="r">0 punti</div></article>
+    <article class="house s" data-house-card="s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
+  </section>
+
+  <!-- ELENCO STUDENTI DELLA CASATA (SOLO DOCENTE) -->
+  <section class="card" id="houseStudentsPanel" style="display:none" aria-live="polite">
+    <h3 id="houseStudentsTitle">Studenti della Casata</h3>
+    <div id="houseStudentsList" class="list"></div>
   </section>
 
   <!-- CLASSIFICA -->
@@ -413,7 +425,37 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       .map(([k, v], i) => `<div style="display:flex;justify-content:space-between;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i+1}. ${houses[k]}</span><b>${v} punti</b></div>`)
       .join('');
 
-    if(role === 'teacher') renderTeacher();
+    document.querySelectorAll('.house').forEach(card => {
+      const isTeacher = role === 'teacher';
+      card.classList.toggle('clickable', isTeacher);
+      card.classList.toggle('selected', isTeacher && card.dataset.houseCard === selectedHouse);
+      card.tabIndex = isTeacher ? 0 : -1;
+      card.setAttribute('aria-label', isTeacher ? 'Visualizza studenti di ' + houses[card.dataset.houseCard] : houses[card.dataset.houseCard]);
+      card.setAttribute('role', isTeacher ? 'button' : 'article');
+    });
+    if(role === 'teacher') {
+      renderTeacher();
+      renderHouseStudents();
+    } else {
+      $('houseStudentsPanel').style.display = 'none';
+      document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
+    }
+  }
+
+  function renderHouseStudents(){
+    if(role !== 'teacher' || !selectedHouse) {
+      $('houseStudentsPanel').style.display = 'none';
+      return;
+    }
+    const members = state.students
+      .filter(s => s.house === selectedHouse)
+      .slice()
+      .sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse];
+    $('houseStudentsList').innerHTML = members.map(s =>
+      `<div class="house-student-line"><b>${esc(s.name)}</b><span>${s.points || 0} punti</span></div>`
+    ).join('') || '<div class="house-students-empty">Nessuno studente assegnato a questa Casata.</div>';
+    $('houseStudentsPanel').style.display = 'block';
   }
 
   function renderTeacher(){
@@ -453,6 +495,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
 
   function setRole(r){
     role = r;
+    if(r !== 'teacher') selectedHouse = null;
     const isTeacher = r === 'teacher';
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherMode').style.display = isTeacher ? 'none' : 'inline-block';
@@ -468,6 +511,24 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   }
 
   // Event Listeners
+  // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
+  document.querySelectorAll('.house').forEach(card => {
+    const openHouse = () => {
+      if(role !== 'teacher') return;
+      const key = card.dataset.houseCard;
+      selectedHouse = selectedHouse === key ? null : key;
+      render();
+      if(selectedHouse) $('houseStudentsPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    };
+    card.addEventListener('click', openHouse);
+    card.addEventListener('keydown', e => {
+      if(e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        openHouse();
+      }
+    });
+  });
+
   $('teacherMode').onclick = () => {
     if(role !== 'teacher'){
       $('authBox').style.display = 'grid';
