@@ -563,6 +563,124 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
+
+
+/* Atmosfera Sala Grande: cornice, luce calda e dettagli di pergamena */
+header {
+  padding-left: max(22px, 4vw);
+  padding-right: max(22px, 4vw);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(226,194,122,.12), transparent 58%),
+    linear-gradient(180deg, rgba(7,9,15,.12), rgba(7,9,15,.0));
+}
+header::after {
+  pointer-events: none;
+}
+header .eyebrow { box-shadow: 0 0 26px rgba(226,194,122,.06); }
+header .title { position: relative; display: inline-block; }
+header .title::after {
+  content: '';
+  display: block;
+  width: min(72%, 340px);
+  height: 1px;
+  margin: 13px auto 0;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  opacity: .8;
+}
+.intro {
+  position: relative;
+  padding: 0 12px 20px;
+}
+.intro::after {
+  content: '✦';
+  display: block;
+  margin-top: 13px;
+  color: var(--gold);
+  opacity: .75;
+  font-size: 13px;
+}
+/* Le quattro Casate: tinta propria, riflesso tenue e interazione morbida */
+.house {
+  border-color: color-mix(in srgb, currentColor 24%, transparent);
+  background:
+    linear-gradient(145deg, var(--house-tint, rgba(29,32,44,.96)), rgba(12,14,21,.98) 72%),
+    #11131b;
+  transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease, filter .25s ease;
+}
+.house::before { height: 4px; box-shadow: 0 0 16px currentColor; }
+.house::after { pointer-events: none; transition: opacity .25s ease, transform .35s ease; }
+.house:hover::after { opacity: .1; transform: scale(1.12); }
+.house:hover { filter: saturate(1.08); }
+.house.g { --house-tint: rgba(164,43,53,.23); }
+.house.t { --house-tint: rgba(202,159,48,.22); }
+.house.r { --house-tint: rgba(65,117,178,.24); }
+.house.s { --house-tint: rgba(61,132,83,.23); }
+.house.leading {
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 0 1px rgba(242,223,170,.42), 0 0 28px rgba(226,194,122,.13), 0 15px 35px rgba(0,0,0,.3);
+}
+.house.leading .points { background: rgba(226,194,122,.14); border-color: var(--gold-soft); color: var(--gold-soft); }
+.house.leading .points::before { content: '🏆 '; }
+/* Pannello docente: due gruppi riconoscibili, mantenendo le due righe di pulsanti */
+.controls-row::before {
+  flex: 0 0 100%;
+  text-align: left;
+  padding: 0 4px 2px;
+  color: #c8b98f;
+  font: 700 10px/1.4 system-ui, sans-serif;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+.controls-row:first-child::before { content: 'Gestione didattica'; }
+.controls-row:nth-child(2)::before { content: 'Dati e archivio'; }
+#teacherControls { padding: 15px; border: 1px solid rgba(226,194,122,.22); border-radius: 18px; background: rgba(11,13,20,.58); }
+#teacherControls .controls-row + .controls-row { padding-top: 10px; border-top: 1px solid rgba(226,194,122,.13); }
+/* Coppa delle Case: il distacco è leggibile e la parità viene evidenziata correttamente */
+#ranking { position: relative; overflow: hidden; }
+#ranking::before {
+  content: '🏆';
+  position: absolute;
+  right: 24px;
+  top: 18px;
+  font-size: 26px;
+  opacity: .12;
+  filter: grayscale(.25);
+  pointer-events: none;
+}
+.ranking-row.leader { border-color: rgba(226,194,122,.8); }
+.ranking-row.leader > span:first-child::before { content: '✦ '; color: var(--gold-soft); }
+.ranking-row.leader.tied-leader { box-shadow: inset 3px 0 0 #d8b56a; }
+/* Conferme discrete, senza interrompere il lavoro con finestre modali */
+.toast {
+  position: fixed;
+  z-index: 20;
+  left: 50%;
+  bottom: 24px;
+  transform: translate(-50%, 18px);
+  width: max-content;
+  max-width: min(92vw, 520px);
+  padding: 12px 18px;
+  border: 1px solid rgba(226,194,122,.65);
+  border-radius: 14px;
+  background: rgba(20,23,34,.97);
+  color: #f7edcf;
+  box-shadow: 0 12px 35px rgba(0,0,0,.45);
+  font: 600 13px/1.45 system-ui, sans-serif;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .22s ease, transform .22s ease;
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+@media (max-width: 700px) {
+  #teacherControls { padding: 12px; }
+  .controls-row::before { text-align: center; }
+  .controls-row .btn { min-width: min(100%, 145px); }
+  #ranking::before { right: 18px; top: 17px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast, .house { transition: none !important; }
+}
+
 </style>
 </head>
 <body>
@@ -666,6 +784,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
     <div id="gradeHistory" class="list" style="margin-top:18px"></div>
   </section>
 
+  <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
   <footer>Pagina Hogwarts · prototipo interattivo per uso didattico</footer>
 </main>
 
@@ -686,6 +805,15 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
   const KEY = 'hogwartsState';
   const $ = id => document.getElementById(id);
+  let toastTimer = null;
+  function showToast(message){
+    const el = $('toast');
+    if(!el) return;
+    el.textContent = message;
+    el.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
 
   let role = 'student';
   let state;
@@ -722,6 +850,8 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
       if(el) el.textContent = formatPoints(t[k]) + ' punti';
       const card = document.querySelector(`[data-house-card="${k}"]`);
       if(card){
+        const highest = Math.max(...Object.values(t));
+        card.classList.toggle('leading', highest > 0 && t[k] === highest);
         const members = state.students.filter(st => st.house === k);
         const avg = members.length ? members.reduce((sum, st) => sum + (Number(st.points) || 0), 0) / members.length : 0;
         const best = members.slice().sort((a,b) => (Number(b.points)||0) - (Number(a.points)||0) || a.name.localeCompare(b.name,'it'))[0];
@@ -742,7 +872,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
       const gap = i === 0 ? null : v - ranking[i-1][1];
       const tied = i > 0 && v === ranking[i-1][1];
       const detail = i === 0 ? (leaders.length > 1 ? '🏆 In testa a pari merito' : '🏆 In testa') : (tied ? 'A pari punti' : 'Distacco: ' + formatPoints(Math.abs(gap)) + ' pt');
-      return `<div class="ranking-row ${i===0 ? 'leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${formatPoints(v)} punti</b><span class="ranking-detail">${detail}</span></div>`;
+      return `<div class="ranking-row ${v === lead[1] && lead[1] > 0 ? 'leader' : ''} ${leaders.length > 1 && v === lead[1] ? 'tied-leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${formatPoints(v)} punti</b><span class="ranking-detail">${detail}</span></div>`;
     }).join('');
 
     document.querySelectorAll('.house').forEach(card => {
@@ -928,6 +1058,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
     $('studentName').value = '';
     save();
     render();
+    showToast('Studente aggiunto alla classe.');
   };
 
   $('addStudent').onclick = addStudentAction;
@@ -946,6 +1077,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
     st.history = st.history || [];
     st.history.push({ id: Date.now(), date: new Date().toISOString(), grade: 'Encomio speciale', points: 1 });
     save(); render();
+    showToast('Encomio assegnato a ' + st.name + ': +1 punto.');
   };
 
   $('classList').onclick = e => {
@@ -999,6 +1131,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
 
     save();
     render();
+    showToast('Smistamento completato!');
     $('result').innerHTML = '<strong>🎩 Smistamento completato!</strong><br><br>' +
       o.map(h => houses[h] + ': ' + state.students.filter(s => s.house === h).length + ' studenti').join('<br>');
     $('modal').classList.add('open');
@@ -1092,11 +1225,12 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
     ];
     downloadBlob(makeZip(files), 'hogwarts-esportazione-' + new Date().toISOString().slice(0,10) + '.xlsx');
   }
-  $('exportBtn').onclick = () => { try { exportExcel(); } catch(err) { console.error(err); alert('Esportazione Excel non riuscita. Riprova.'); } };
+  $('exportBtn').onclick = () => { try { exportExcel(); showToast('Esportazione Excel avviata.'); } catch(err) { console.error(err); alert('Esportazione Excel non riuscita. Riprova.'); } };
   $('backupBtn').onclick = () => {
     try {
       const backup = { format: 'hogwarts-torneo-backup', version: 1, exportedAt: new Date().toISOString(), state };
       downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' }), 'hogwarts-backup-' + new Date().toISOString().slice(0,10) + '.json');
+      showToast('Backup JSON pronto. Conserva il file in un luogo sicuro.');
     } catch(err) { console.error(err); alert('Backup non riuscito. Riprova.'); }
   };
   $('restoreBtn').onclick = () => $('restoreFile').click();
@@ -1109,7 +1243,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
       if(!restored || !Array.isArray(restored.students) || !restored.students.every(st => st && typeof st.name === 'string')) throw new Error('Formato non valido');
       if(!confirm('Il ripristino sostituirà i dati attualmente presenti in questo browser. Vuoi continuare?')) return;
       state = { students: restored.students.map(st => ({ id: st.id, name: st.name, house: ['g','t','r','s'].includes(st.house) ? st.house : null, points: Number(st.points) || 0, history: Array.isArray(st.history) ? st.history : [] })), nextId: Number(restored.nextId) || Math.max(0, ...restored.students.map(st => Number(st.id) || 0)) + 1 };
-      save(); selectedHouse = null; render(); alert('Backup ripristinato correttamente.');
+      save(); selectedHouse = null; render(); showToast('Backup ripristinato correttamente.');
     } catch(err) { console.error(err); alert('Impossibile ripristinare il file. Scegli un backup JSON valido di Hogwarts.'); }
     finally { $('restoreFile').value = ''; }
   };
@@ -1139,6 +1273,7 @@ footer { padding-top: 30px; color: #898373; letter-spacing: .035em; }
     render();
     $('pointsStudent').value = studentId;
     history();
+    showToast('Voto registrato per ' + s.name + ': ' + (p >= 0 ? '+' : '') + formatPoints(p) + ' punti.');
   };
 
   $('saveGrade').onclick = saveGradeAction;
