@@ -196,6 +196,11 @@ main {
 .btn.commend { border-color:#bba7e8; color:#e7dcff; }
 .unassigned { color:#f0cb81 !important; border-color:#9a7536 !important; }
 #app { animation: pageReveal .8s ease-out both; }
+.class-manager-controls { display:flex; gap:10px; align-items:end; flex-wrap:wrap; }
+.class-manager-controls label { display:grid; gap:6px; flex:1; min-width:220px; font:14px system-ui,sans-serif; color:var(--muted); }
+.class-manager-controls select { width:100%; }
+.class-manager-note { color:var(--muted); font:13px/1.5 system-ui,sans-serif; margin:10px 0 0; }
+.class-status { display:inline-block; margin-left:8px; padding:4px 8px; border:1px solid #6a5a3a; border-radius:999px; color:var(--gold); font:12px system-ui,sans-serif; }
 @keyframes pageReveal { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:650px) { .ranking-row { grid-template-columns:1fr auto; } .ranking-detail { grid-column:1/-1; text-align:left; } }
 .house:after {
@@ -681,12 +686,84 @@ header .title::after {
   .toast, .house { transition: none !important; }
 }
 
+
+
+/* Sfondo alleggerito: resta l'atmosfera magica, ma con maggiore luminosità e contrasto. */
+html, body { background-color: #151c2a; }
+body {
+  background: radial-gradient(ellipse at 50% 0%, #3a4965 0%, #273249 39%, #192233 78%, #151c2a 100%);
+}
+#app {
+  background: linear-gradient(180deg, rgba(18,24,37,.04), rgba(18,24,37,.34));
+}
+.card {
+  background: linear-gradient(145deg, rgba(35,42,57,.94), rgba(27,33,47,.96));
+  border-color: rgba(216,181,106,.28);
+}
+#teacherControls { background: rgba(29,36,51,.76); }
+.house {
+  background: linear-gradient(155deg, var(--house-tint, rgba(45,53,70,.98)), rgba(25,31,45,.98) 76%);
+}
+.house.g { --house-tint: rgba(164,43,53,.29); }
+.house.t { --house-tint: rgba(202,159,48,.27); }
+.house.r { --house-tint: rgba(65,117,178,.30); }
+.house.s { --house-tint: rgba(61,132,83,.29); }
+.btn:not(.primary) { background: rgba(43,50,66,.92); }
+.btn:not(.primary):hover { background: rgba(59,68,87,.98); }
+input, select, .authbox input {
+  background: #20283a;
+  color: #f4ecd9;
+  border-color: rgba(216,181,106,.4);
+}
+.step { background: linear-gradient(145deg, #2b3345, #222a3b); }
+.dialog { background: linear-gradient(145deg, #30384a, #202738); }
+.toast { background: rgba(39,47,64,.98); }
+.btn.danger {
+  color: #ffe1df;
+  border-color: #d58c85;
+  background: linear-gradient(135deg, rgba(135,49,49,.9), rgba(91,36,40,.96));
+}
+.btn.danger:hover { background: linear-gradient(135deg, rgba(161,59,59,.98), rgba(112,43,47,.98)); }
+.class-status { vertical-align: middle; }
+#activeClassSummary .btn { margin: 6px 0; vertical-align: middle; }
+
+/* Selettore pubblico: resta separato dalla classe scelta nel pannello docente. */
+.public-class-picker {
+  max-width: 760px;
+  margin: 0 auto 24px;
+  padding: clamp(18px, 3vw, 28px);
+  border-color: rgba(216,181,106,.42);
+  background: linear-gradient(135deg, rgba(43,53,72,.96), rgba(29,37,52,.97));
+}
+.public-picker-heading { display:flex; align-items:center; gap:15px; margin-bottom:16px; }
+.public-picker-crest {
+  display:grid; place-items:center; flex:0 0 54px; height:54px;
+  border:1px solid rgba(216,181,106,.58); border-radius:15px;
+  background:rgba(216,181,106,.10); font-size:27px;
+}
+.public-picker-heading h3 { margin:0 0 5px; color:var(--gold); font-size:clamp(19px,2.3vw,23px); }
+.public-picker-heading h3:after { display:none; }
+.public-picker-heading p { margin:0; color:#d2ccbe; font:14px/1.5 system-ui,sans-serif; }
+.public-class-picker label { display:block; margin-bottom:7px; color:#e6dcc5; font:600 14px system-ui,sans-serif; }
+#publicClassSelect { width:100%; min-height:52px; padding:13px 16px; font-size:17px; font-weight:600; }
+.public-class-caption { margin:10px 0 0; color:#c9c1af; font:13px/1.5 system-ui,sans-serif; }
+/* Menù a tendina più comodi da usare nella zona docente. */
+#classManager select, #classCard select, #pointsCard select, #teacherControls select {
+  min-height:50px; padding:12px 15px; font-size:16px; line-height:1.35;
+}
+#classManager select { min-width:260px; }
+@media(max-width:600px) {
+  .public-picker-heading { align-items:flex-start; }
+  .public-picker-crest { flex-basis:46px; height:46px; font-size:23px; }
+  #publicClassSelect { min-height:50px; font-size:16px; }
+  #classManager select { min-width:0; }
+}
+
 </style>
 </head>
 <body>
 <div id="app">
 <header>
-  <div class="eyebrow">Anno scolastico · Liceo Scientifico Newton</div>
   <div class="crest"><div class="shield"><div class="crestmark">⚡</div></div></div>
   <h1 class="title">Hogwarts</h1>
   <p class="subtitle">Il Torneo delle Quattro Casate</p>
@@ -694,10 +771,24 @@ header .title::after {
 <main>
   <p class="intro">Benvenuti nella Sala Grande. Le Casate conquistano punti e portano la propria squadra in cima alla classifica.</p>
   
+  <!-- SCELTA PUBBLICA DELLA CLASSE: indipendente dalla classe gestita dal docente -->
+  <section class="card public-class-picker" id="publicClassPicker" aria-label="Scegli la classe da visualizzare">
+    <div class="public-picker-heading">
+      <span class="public-picker-crest" aria-hidden="true">🏰</span>
+      <div>
+        <h3>Visita una classe</h3>
+        <p>Seleziona una classe per vedere la sua Coppa delle Case. Sono disponibili soltanto le classi attive.</p>
+      </div>
+    </div>
+    <label for="publicClassSelect">Classe da visualizzare</label>
+    <select id="publicClassSelect" aria-label="Scegli la classe da visualizzare"></select>
+    <p id="publicClassCaption" class="public-class-caption" aria-live="polite"></p>
+  </section>
+
   <!-- ACCESSO -->
-  <section class="card" style="margin-top:0">
+  <section class="card" id="accessSection" style="margin-top:0">
     <div class="controls" style="margin:0">
-      <button type="button" class="btn primary" id="teacherMode">👨‍🏫 Accesso docente</button>
+      <button type="button" class="btn primary" id="teacherMode">🧙🏻‍♂️ Accesso docente</button>
     </div>
     <div id="authBox" class="authbox">
       <input id="email" type="email" placeholder="Email docente">
@@ -723,6 +814,20 @@ header .title::after {
       <input type="file" id="restoreFile" accept=".json,application/json" hidden>
     </div>
   </div>
+
+  <!-- GESTIONE CLASSI E ANNI SCOLASTICI (DOCENTE) -->
+  <section class="card" id="classManager" style="display:none">
+    <h3>🏫 Classi e anni scolastici</h3>
+    <p id="activeClassSummary" style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">Classe attiva</p>
+    <div class="class-manager-controls">
+      <label>Classe da gestire
+        <select id="activeClassSelect" aria-label="Seleziona la classe da gestire"></select>
+      </label>
+      <button type="button" class="btn" id="newClassBtn">＋ Nuova classe</button>
+      <button type="button" class="btn primary" id="promoteClassBtn">🎓 Promuovi alla classe successiva</button>
+    </div>
+    <p class="class-manager-note">Ogni classe ha studenti, Casate, punteggi e storico indipendenti. Promuovendo una classe, gli studenti conservano la Casata; la nuova Coppa riparte da zero e la classe precedente resta consultabile in archivio.</p>
+  </section>
 
   <!-- Le Casate e la Coppa sono già visibili: non serve un menu duplicato. -->
 
@@ -780,6 +885,7 @@ header .title::after {
       <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div>
       <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
       <button type="button" class="btn commend" id="commendBtn">✨ Encomio speciale +1 punto</button>
+      <button type="button" class="btn" id="malusBtn">⚖️ Malus −1 punto</button>
     </div>
     <div id="gradeHistory" class="list" style="margin-top:18px"></div>
   </section>
@@ -804,6 +910,8 @@ header .title::after {
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
   const KEY = 'hogwartsState';
+  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
+  const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
   let toastTimer = null;
   function showToast(message){
@@ -821,30 +929,152 @@ header .title::after {
   let loginBusy = false;
   let selectedHouse = null;
 
-  try {
-    state = JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 };
-  } catch(e) {
-    state = { students: [], nextId: 1 };
+  const DEFAULT_YEAR = '2026–2027';
+  const romanValues = { I:1, V:5, X:10, L:50, C:100, D:500, M:1000 };
+  function romanToNumber(roman){
+    let total = 0, previous = 0;
+    for(const char of String(roman).toUpperCase().split('').reverse()){
+      const value = romanValues[char] || 0;
+      total += value < previous ? -value : value;
+      previous = Math.max(previous, value);
+    }
+    return total;
   }
-  if(!Array.isArray(state.students)) state = { students: [], nextId: 1 };
-
-  const save = () => localStorage.setItem(KEY, JSON.stringify(state));
+  function numberToRoman(num){
+    const pairs = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+    let out = '';
+    for(const [value, numeral] of pairs) while(num >= value){ out += numeral; num -= value; }
+    return out || 'I';
+  }
+  function classGrade(name){
+    const match = String(name || '').trim().match(/^([IVXLCDM]+)(?:\s+|$)/i);
+    return match ? romanToNumber(match[1]) : 0;
+  }
+  function isFinalYearClass(name){ return classGrade(name) === 5; }
+  function nextClassName(name){
+    const match = String(name || '').trim().match(/^([IVXLCDM]+)(\s+.*)$/i);
+    if(!match) return String(name || '').trim();
+    const grade = romanToNumber(match[1]);
+    return grade > 0 ? numberToRoman(grade + 1) + match[2] : String(name || '').trim();
+  }
+  function nextSchoolYear(year){
+    const match = String(year || DEFAULT_YEAR).match(/(\d{4})\D+(\d{4})/);
+    return match ? (Number(match[1]) + 1) + '–' + (Number(match[2]) + 1) : DEFAULT_YEAR;
+  }
+  function normalizeStudents(list){
+    return (Array.isArray(list) ? list : []).filter(st => st && typeof st.name === 'string').map(st => ({
+      id: st.id ?? Date.now() + Math.random(), name: st.name,
+      house: ['g','t','r','s'].includes(st.house) ? st.house : null,
+      points: Number(st.points) || 0, history: Array.isArray(st.history) ? st.history : []
+    }));
+  }
+  function normalizeState(raw){
+    if(raw && Array.isArray(raw.classes) && raw.classes.length){
+      const classes = raw.classes.filter(c => c && typeof c.name === 'string').map((c,i) => ({
+        id: String(c.id || ('class-' + (i+1))), name: c.name,
+        schoolYear: c.schoolYear || DEFAULT_YEAR, students: normalizeStudents(c.students),
+        nextId: Number(c.nextId) || Math.max(0, ...normalizeStudents(c.students).map(st => Number(st.id) || 0)) + 1,
+        archived: Boolean(c.archived)
+      }));
+      if(!classes.length) return normalizeState({ students: [], nextId: 1 });
+      const active = classes.find(c => c.id === String(raw.activeClassId)) || classes.find(c => !c.archived) || classes[0];
+      return { classes, activeClassId: active.id, nextClassId: Number(raw.nextClassId) || classes.length + 1,
+        className: active.name, schoolYear: active.schoolYear, students: active.students, nextId: active.nextId };
+    }
+    // Migrazione automatica del vecchio formato: conserva tutti gli studenti, le Casate e i punti esistenti.
+    const students = normalizeStudents(raw && raw.students);
+    const nextId = Number(raw && raw.nextId) || Math.max(0, ...students.map(st => Number(st.id) || 0)) + 1;
+    const legacyClass = { id: 'class-1', name: (raw && raw.className) || 'II H', schoolYear: (raw && raw.schoolYear) || DEFAULT_YEAR, students, nextId, archived: false };
+    return { classes: [legacyClass], activeClassId: legacyClass.id, nextClassId: 2,
+      className: legacyClass.name, schoolYear: legacyClass.schoolYear, students: legacyClass.students, nextId: legacyClass.nextId };
+  }
+  try {
+    state = normalizeState(JSON.parse(localStorage.getItem(KEY)) || { students: [], nextId: 1 });
+  } catch(e) {
+    state = normalizeState({ students: [], nextId: 1 });
+  }
+  // All'apertura della pagina la homepage parte sempre dal cumulativo.
+  // La scelta di una singola classe vale per la visualizzazione corrente, non per la classe gestita dal docente.
+  let publicClassId = ALL_ACTIVE_CLASSES;
+  function publicClass(){
+    const available = state.classes.filter(c => !c.archived);
+    if(!available.length) return null;
+    if(publicClassId === ALL_ACTIVE_CLASSES) return null;
+    const chosen = available.find(c => c.id === publicClassId);
+    if(chosen) return chosen;
+    publicClassId = ALL_ACTIVE_CLASSES;
+    return null;
+  }
+  function publicStudents(){
+    const selected = publicClass();
+    return selected ? selected.students : state.classes.filter(c => !c.archived).flatMap(c => c.students);
+  }
+  function renderPublicClassSelector(){
+    const select = $('publicClassSelect');
+    if(!select) return;
+    const available = state.classes.filter(c => !c.archived).slice().sort((a,b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || a.name.localeCompare(b.name,'it'));
+    const selected = publicClass();
+    select.innerHTML = available.length
+      ? `<option value="${ALL_ACTIVE_CLASSES}">🏰 Castello</option>` + available.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}</option>`).join('')
+      : '<option value="">Nessuna classe attiva disponibile</option>';
+    select.disabled = !available.length;
+    select.value = selected ? selected.id : (available.length ? ALL_ACTIVE_CLASSES : '');
+    $('publicClassCaption').textContent = !available.length
+      ? 'Non ci sono classi attive da visualizzare.'
+      : selected
+        ? 'Stai visitando ' + selected.name + ' · anno scolastico ' + selected.schoolYear + '.'
+        : 'Stai visitando il Castello: punti di tutte le classi attive. Le classi archiviate sono escluse.';
+  }
+  function activeClass(){ return state.classes.find(c => c.id === state.activeClassId) || state.classes[0]; }
+  function activeIsArchived(){ const c = activeClass(); return Boolean(c && c.archived); }
+  function save(){
+    const active = activeClass();
+    if(active){ active.name = state.className || active.name; active.schoolYear = state.schoolYear || active.schoolYear; active.students = state.students; active.nextId = state.nextId; }
+    localStorage.setItem(KEY, JSON.stringify(state));
+  }
   const score = v => Number((v - 6).toFixed(2));
   
   const esc = s => String(s).replace(/[&<>"']/g, c => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 
-  function totals(){
+  function totals(students = state.students){
     let t = { g: 0, t: 0, r: 0, s: 0 };
-    state.students.forEach(s => {
+    students.forEach(s => {
       if(s.house) t[s.house] += s.points || 0;
     });
     return t;
   }
 
+  function renderClassManager(){
+    const select = $('activeClassSelect');
+    if(!select) return;
+    const currentValue = state.activeClassId;
+    select.innerHTML = state.classes.slice().sort((a,b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || a.name.localeCompare(b.name,'it'))
+      .map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}${c.archived ? ' · Archivio' : ''}</option>`).join('');
+    select.value = currentValue;
+    const c = activeClass();
+    $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${c.archived ? ' <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="Elimina definitivamente questa classe archiviata">🗑️ Cancella archivio</button>' : ''}<br><span style="font-size:13px">${state.students.length} studenti · ${state.students.filter(st => st.house).length} smistati</span>`;
+    const finalYear = isFinalYearClass(c.name);
+    $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
+    $('promoteClassBtn').disabled = activeIsArchived();
+    $('promoteClassBtn').title = activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
+    const deleteArchivedBtn = $('deleteArchivedClassBtn');
+    if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
+  }
+
   function render(){
-    const t = totals();
+    renderPublicClassSelector();
+    // In modalità docente i punteggi seguono esclusivamente la classe gestita.
+    // Nella homepage pubblica la selezione è indipendente e, di default, cumulativa.
+    const teacherClass = role === 'teacher' ? activeClass() : null;
+    const selectedPublicClass = role === 'teacher' ? null : publicClass();
+    const displayedClass = teacherClass || selectedPublicClass;
+    const displayedStudents = role === 'teacher'
+      ? (teacherClass ? teacherClass.students : [])
+      : publicStudents();
+    const showingAggregate = role !== 'teacher' && !selectedPublicClass && state.classes.some(c => !c.archived);
+    const t = totals(displayedStudents);
     Object.keys(t).forEach(k => {
       const el = document.querySelector(`[data-house="${k}"]`);
       if(el) el.textContent = formatPoints(t[k]) + ' punti';
@@ -852,7 +1082,7 @@ header .title::after {
       if(card){
         const highest = Math.max(...Object.values(t));
         card.classList.toggle('leading', highest > 0 && t[k] === highest);
-        const members = state.students.filter(st => st.house === k);
+        const members = displayedStudents.filter(st => st.house === k);
         const avg = members.length ? members.reduce((sum, st) => sum + (Number(st.points) || 0), 0) / members.length : 0;
         const best = members.slice().sort((a,b) => (Number(b.points)||0) - (Number(a.points)||0) || a.name.localeCompare(b.name,'it'))[0];
         let stats = card.querySelector('.house-stats');
@@ -864,10 +1094,13 @@ header .title::after {
     const ranking = Object.entries(t).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
     const lead = ranking[0];
     const leaders = ranking.filter(([,v]) => v === lead[1]);
-    $('rankingLead').textContent = lead[1] === 0
-      ? 'La Coppa si accende quando le Casate iniziano a conquistare punti.'
-      : leaders.length > 1 ? 'Parità in testa: ' + leaders.map(([k]) => houses[k]).join(' e ') + '!'
-      : 'In testa: ' + houses[lead[0]] + ' · ' + formatPoints(lead[1]) + ' punti';
+    $('rankingLead').textContent = !displayedStudents.length && !state.classes.some(c => !c.archived)
+      ? 'Non ci sono classi attive da visualizzare.'
+      : lead[1] === 0
+        ? (showingAggregate ? 'Il Castello si anima quando le Casate iniziano a conquistare punti.' : 'La Coppa di ' + (displayedClass ? displayedClass.name : 'questa classe') + ' si accende quando le Casate iniziano a conquistare punti.')
+        : leaders.length > 1 ? 'Parità in testa: ' + leaders.map(([k]) => houses[k]).join(' e ') + '!'
+        : 'In testa: ' + houses[lead[0]] + ' · ' + formatPoints(lead[1]) + ' punti';
+    $('ranking').querySelector('h3').textContent = '🏆 Coppa delle Case' + (showingAggregate ? ' · Tutte le classi attive' : displayedClass ? ' · ' + displayedClass.name : '');
     $('rankingList').innerHTML = ranking.map(([k,v],i) => {
       const gap = i === 0 ? null : v - ranking[i-1][1];
       const tied = i > 0 && v === ranking[i-1][1];
@@ -886,6 +1119,7 @@ header .title::after {
     if(role === 'teacher') {
       renderTeacher();
       renderHouseStudents();
+      renderClassManager();
     } else {
       $('houseStudentsPanel').style.display = 'none';
       document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
@@ -899,10 +1133,12 @@ header .title::after {
       $('houseStudentsPanel').style.display = 'none';
       return;
     }
+    const shownClass = activeClass();
+    const shownStudents = shownClass ? shownClass.students : [];
     const query = ($('houseSearch').value || '').trim().toLocaleLowerCase('it');
-    const members = state.students.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
+    const members = shownStudents.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
       .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
-    $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse];
+    $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + (shownClass ? ' · ' + shownClass.name : '');
     $('houseStudentsList').innerHTML = members.map(st =>
       `<div class="house-student-line"><b>${esc(st.name)}</b><span>${formatPoints(st.points || 0)} punti</span></div>`
     ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
@@ -923,7 +1159,7 @@ header .title::after {
         <b>${esc(st.name)}</b>
         <span class="${st.house ? '' : 'unassigned'}" style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${st.house ? houses[st.house] : '🎩 Da smistare'}</span>
         <span>${formatPoints(st.points || 0)} pt</span>
-        <div class="student-actions"><button type="button" class="btn small" data-edit="${st.id}">✎ Rinomina</button><button type="button" class="btn small commend" data-commend="${st.id}">✨ Encomio +1</button><button type="button" class="btn small remove" data-id="${st.id}">🗑 Rimuovi</button></div>
+        <div class="student-actions"><button type="button" class="btn small" data-edit="${st.id}">✎ Rinomina</button><button type="button" class="btn small commend" data-commend="${st.id}">✨ Encomio +1</button><button type="button" class="btn small" data-malus="${st.id}">⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${st.id}">🗑 Rimuovi</button></div>
       </div>`
     ).join('') || '<div class="house-students-empty">Nessuno studente corrisponde ai filtri.</div>';
 
@@ -931,7 +1167,17 @@ header .title::after {
       .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
       .map(st => `<option value="${st.id}">${esc(st.name)} — ${houses[st.house]}</option>`).join('');
     if ([...$('pointsStudent').options].some(o => o.value === previouslySelected)) $('pointsStudent').value = previouslySelected;
-    $('sortBtn').disabled = !state.students.length || state.students.every(st => st.house);
+    const readOnly = activeIsArchived();
+    $('sortBtn').disabled = readOnly || !state.students.length || state.students.every(st => st.house);
+    $('studentName').disabled = readOnly;
+    $('addStudent').disabled = readOnly;
+    $('pointsStudent').disabled = readOnly;
+    $('gradeInput').disabled = readOnly;
+    $('saveGrade').disabled = readOnly;
+    $('commendBtn').disabled = readOnly;
+    $('malusBtn').disabled = readOnly;
+    $('resetBtn').disabled = readOnly;
+    $('classList').querySelectorAll('button').forEach(button => button.disabled = readOnly);
     history();
   }
 
@@ -941,8 +1187,8 @@ header .title::after {
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
       ((s.history || []).slice().reverse().map(h => 
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>${h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : 'Voto ' + h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
-          <button type="button" class="del" data-id="${h.id}" title="Rimuovi voto" style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
+          <span>${h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
+          <button type="button" class="del" data-id="${h.id}" title="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
         </div>`
       ).join('') || '<div>Nessun voto registrato.</div>') : '';
   }
@@ -953,6 +1199,9 @@ header .title::after {
     const isTeacher = r === 'teacher';
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherMode').style.display = isTeacher ? 'none' : 'inline-block';
+    $('accessSection').style.display = isTeacher ? 'none' : 'block';
+    $('classManager').style.display = isTeacher ? 'block' : 'none';
+    $('publicClassPicker').style.display = isTeacher ? 'none' : 'block';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
     $('authBox').style.display = 'none';
@@ -982,6 +1231,17 @@ header .title::after {
       }
     });
   });
+
+  $('publicClassSelect').onchange = e => {
+    const value = String(e.target.value);
+    if(value !== ALL_ACTIVE_CLASSES && !state.classes.some(c => c.id === value && !c.archived)) return;
+    publicClassId = value;
+    selectedHouse = null;
+    $('houseSearch').value = '';
+    render();
+    const chosen = publicClass();
+    showToast(chosen ? 'Stai visualizzando ' + chosen.name + ' · ' + chosen.schoolYear + '.' : 'Stai visitando il Castello: punti di tutte le classi attive.');
+  };
 
   $('teacherMode').onclick = () => {
     if(role !== 'teacher'){
@@ -1038,6 +1298,116 @@ header .title::after {
 
   $('logoutBtn').onclick = () => setRole('student');
 
+  function switchClass(classId){
+    const target = state.classes.find(c => c.id === String(classId));
+    if(!target) return;
+    save();
+    state.activeClassId = target.id;
+    state.className = target.name;
+    state.schoolYear = target.schoolYear;
+    state.students = target.students;
+    state.nextId = target.nextId;
+    selectedHouse = null;
+    $('houseSearch').value = '';
+    $('studentSearch').value = '';
+    $('houseFilter').value = 'all';
+    $('gradeInput').value = '';
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    save();
+    render();
+    showToast(target.archived ? 'Archivio aperto in sola consultazione.' : 'Classe attiva: ' + target.name + '.');
+  }
+
+  $('activeClassSelect').onchange = e => switchClass(e.target.value);
+
+  function deleteArchivedClass(){
+    const target = activeClass();
+    if(!target || !target.archived){ showToast('Puoi cancellare soltanto una classe archiviata.'); return; }
+    if(state.classes.length <= 1){
+      alert('Prima di eliminare l’unica classe rimasta, crea una nuova classe.');
+      return;
+    }
+    const confirmation = 'Vuoi eliminare definitivamente ' + target.name + ' · ' + target.schoolYear + '?\n\nSaranno cancellati da questo browser gli studenti, le Casate, i punteggi e lo storico di questa classe. L’operazione non si può annullare. Esporta prima un backup JSON se vuoi conservarne una copia.';
+    if(!confirm(confirmation)) return;
+    const deletedName = target.name + ' · ' + target.schoolYear;
+    state.classes = state.classes.filter(c => c.id !== target.id);
+    let next = state.classes.find(c => !c.archived) || state.classes[0];
+    state.activeClassId = next.id;
+    state.className = next.name;
+    state.schoolYear = next.schoolYear;
+    state.students = next.students;
+    state.nextId = next.nextId;
+    selectedHouse = null;
+    save();
+    render();
+    showToast('Archivio eliminato: ' + deletedName + '.');
+  }
+
+  $('newClassBtn').onclick = () => {
+    const name = prompt('Nome della nuova classe (es. I H):', 'I H');
+    if(name === null) return;
+    if(!name.trim()){ alert('Inserisci il nome della classe.'); return; }
+    const year = prompt('Anno scolastico (es. 2027–2028):', state.schoolYear || DEFAULT_YEAR);
+    if(year === null) return;
+    if(!year.trim()){ alert('Inserisci l’anno scolastico.'); return; }
+    const cleanName = name.trim(), cleanYear = year.trim();
+    if(state.classes.some(c => c.name.toLocaleLowerCase('it') === cleanName.toLocaleLowerCase('it') && c.schoolYear === cleanYear)){
+      alert('Esiste già una classe con questo nome nello stesso anno scolastico.'); return;
+    }
+    const id = 'class-' + state.nextClassId++;
+    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: [], nextId: 1, archived: false });
+    switchClass(id);
+  };
+
+  $('promoteClassBtn').onclick = () => {
+    if(activeIsArchived()){ alert('Seleziona una classe attiva da promuovere.'); return; }
+    const current = activeClass();
+    if(isFinalYearClass(current.name)){
+      const confirmation = 'Vuoi concludere il percorso della classe ' + current.name + ' · ' + current.schoolYear + '?\n\nLa classe sarà archiviata in sola consultazione. Studenti, Casate, punteggi e storico saranno conservati nell’archivio. Non verrà creata una classe successiva.';
+      if(!confirm(confirmation)) return;
+      current.archived = true;
+      if(publicClassId === current.id) {
+        publicClassId = ALL_ACTIVE_CLASSES;
+      }
+      save();
+      const next = state.classes.find(c => !c.archived && c.id !== current.id);
+      if(next){
+        switchClass(next.id);
+      } else {
+        render();
+      }
+      showToast('Percorso concluso: ' + current.name + ' è stata archiviata.');
+      return;
+    }
+    const suggestedName = nextClassName(current.name) || current.name;
+    const name = prompt('Nome della classe per il nuovo anno scolastico:', suggestedName);
+    if(name === null) return;
+    if(!name.trim()){ alert('Inserisci il nome della nuova classe.'); return; }
+    const suggestedYear = nextSchoolYear(current.schoolYear);
+    const year = prompt('Anno scolastico della nuova classe:', suggestedYear);
+    if(year === null) return;
+    if(!year.trim()){ alert('Inserisci l’anno scolastico.'); return; }
+    const cleanName = name.trim(), cleanYear = year.trim();
+    if(state.classes.some(c => c.name.toLocaleLowerCase('it') === cleanName.toLocaleLowerCase('it') && c.schoolYear === cleanYear)){
+      alert('Esiste già una classe con questo nome nello stesso anno scolastico.'); return;
+    }
+    if(!confirm('Creare ' + cleanName + ' · ' + cleanYear + ' copiando i nomi e le Casate di ' + current.name + '? I punteggi e gli storici del nuovo anno partiranno da zero. La classe attuale resterà nell’archivio e non sarà modificabile.')) return;
+    save();
+    current.archived = true;
+    if(publicClassId === current.id) {
+      publicClassId = ALL_ACTIVE_CLASSES;
+      try { localStorage.setItem(PUBLIC_CLASS_KEY, publicClassId); } catch(e) {}
+    }
+    const promotedStudents = current.students.map((st, index) => ({
+      id: index + 1, name: st.name, house: st.house, points: 0, history: []
+    }));
+    const id = 'class-' + state.nextClassId++;
+    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false });
+    switchClass(id);
+    showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.');
+  };
+
   $('manageBtn').onclick = () => {
     $('classCard').style.display = $('classCard').style.display === 'block' ? 'none' : 'block';
     if($('classCard').style.display === 'block') $('classCard').scrollIntoView({ behavior: 'smooth' });
@@ -1052,6 +1422,7 @@ header .title::after {
   };
 
   const addStudentAction = () => {
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     let n = $('studentName').value.trim();
     if(!n) return;
     state.students.push({ id: state.nextId++, name: n, house: null, points: 0, history: [] });
@@ -1071,6 +1442,7 @@ header .title::after {
   };
 
   const awardCommendation = id => {
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     const st = state.students.find(x => String(x.id) === String(id));
     if(!st) return;
     st.points = (Number(st.points) || 0) + 1;
@@ -1079,10 +1451,22 @@ header .title::after {
     save(); render();
     showToast('Encomio assegnato a ' + st.name + ': +1 punto.');
   };
+  const awardMalus = id => {
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
+    const st = state.students.find(x => String(x.id) === String(id));
+    if(!st) return;
+    st.points = (Number(st.points) || 0) - 1;
+    st.history = st.history || [];
+    st.history.push({ id: Date.now(), date: new Date().toISOString(), grade: 'Malus', points: -1 });
+    save(); render();
+    showToast('Malus assegnato a ' + st.name + ': −1 punto.');
+  };
 
   $('classList').onclick = e => {
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     const edit = e.target.closest('[data-edit]');
     const commend = e.target.closest('[data-commend]');
+    const malus = e.target.closest('[data-malus]');
     const remove = e.target.closest('.remove');
     if(edit){
       const st = state.students.find(x => String(x.id) === edit.dataset.edit);
@@ -1094,6 +1478,9 @@ header .title::after {
     } else if(commend){
       const st = state.students.find(x => String(x.id) === commend.dataset.commend);
       if(st && confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
+    } else if(malus){
+      const st = state.students.find(x => String(x.id) === malus.dataset.malus);
+      if(st && confirm('Applicare un malus di −1 punto a ' + st.name + '?')) awardMalus(st.id);
     } else if(remove && confirm('Rimuovere questo studente e il suo storico?')){
       state.students = state.students.filter(st => String(st.id) !== remove.dataset.id);
       save(); render();
@@ -1108,8 +1495,14 @@ header .title::after {
     if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
     if(confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
   };
+  $('malusBtn').onclick = () => {
+    const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
+    if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
+    if(confirm('Applicare un malus di −1 punto a ' + st.name + '?')) awardMalus(st.id);
+  };
 
   $('sortBtn').onclick = () => {
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     let u = state.students.filter(s => !s.house);
     if(!u.length){
       $('result').textContent = 'Tutti gli studenti sono già stati assegnati a una Casata.';
@@ -1141,7 +1534,8 @@ header .title::after {
   $('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('open'); };
 
   $('resetBtn').onclick = () => {
-    if(confirm('Azzera smistamenti, voti e punteggi?')){
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
+    if(confirm('Azzera smistamenti, voti e punteggi della sola classe ' + state.className + '?')){
       state.students.forEach(s => {
         s.house = null;
         s.points = 0;
@@ -1207,8 +1601,8 @@ header .title::after {
     const movementRows = [['Data','Studente','Casata','Tipo','Voto','Punti']];
     sorted.forEach(st => (st.history || []).forEach(h => {
       let date = h.date || (Number.isFinite(Number(h.id)) && Number(h.id) > 100000000000 ? new Date(Number(h.id)).toISOString() : '');
-      let type = h.grade === 'Encomio speciale' ? 'Encomio speciale' : 'Voto';
-      movementRows.push([date ? String(date).slice(0,10) : '', st.name, st.house ? houses[st.house] : 'Da smistare', type, h.grade === 'Encomio speciale' ? '' : h.grade, Number(h.points) || 0]);
+      let type = h.grade === 'Encomio speciale' ? 'Encomio speciale' : h.grade === 'Malus' ? 'Malus' : 'Voto';
+      movementRows.push([date ? String(date).slice(0,10) : '', st.name, st.house ? houses[st.house] : 'Da smistare', type, (h.grade === 'Encomio speciale' || h.grade === 'Malus') ? '' : h.grade, Number(h.points) || 0]);
     }));
     const sheets = [
       ['xl/worksheets/sheet1.xml', sheetXml(studentsRows)],
@@ -1240,10 +1634,11 @@ header .title::after {
     try {
       const data = JSON.parse(await file.text());
       const restored = data && data.format === 'hogwarts-torneo-backup' ? data.state : data;
-      if(!restored || !Array.isArray(restored.students) || !restored.students.every(st => st && typeof st.name === 'string')) throw new Error('Formato non valido');
+      const valid = restored && (Array.isArray(restored.classes) && restored.classes.every(c => c && typeof c.name === 'string' && Array.isArray(c.students)) || Array.isArray(restored.students) && restored.students.every(st => st && typeof st.name === 'string'));
+      if(!valid) throw new Error('Formato non valido');
       if(!confirm('Il ripristino sostituirà i dati attualmente presenti in questo browser. Vuoi continuare?')) return;
-      state = { students: restored.students.map(st => ({ id: st.id, name: st.name, house: ['g','t','r','s'].includes(st.house) ? st.house : null, points: Number(st.points) || 0, history: Array.isArray(st.history) ? st.history : [] })), nextId: Number(restored.nextId) || Math.max(0, ...restored.students.map(st => Number(st.id) || 0)) + 1 };
-      save(); selectedHouse = null; render(); showToast('Backup ripristinato correttamente.');
+      state = normalizeState(restored);
+      save(); selectedHouse = null; render(); renderClassManager(); showToast('Backup ripristinato correttamente.');
     } catch(err) { console.error(err); alert('Impossibile ripristinare il file. Scegli un backup JSON valido di Hogwarts.'); }
     finally { $('restoreFile').value = ''; }
   };
@@ -1258,6 +1653,7 @@ header .title::after {
   };
 
   const saveGradeAction = () => {
+    if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
         v = parseFloat($('gradeInput').value);
     if(!s || !Number.isFinite(v) || v < 1 || v > 10){
@@ -1286,6 +1682,7 @@ header .title::after {
   };
 
   $('gradeHistory').onclick = e => {
+    if(activeIsArchived()){ showToast('Lo storico in archivio è di sola consultazione.'); return; }
     let b = e.target.closest('.del');
     if(!b) return;
     let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
@@ -1298,6 +1695,7 @@ header .title::after {
     }
   };
 
+  save();
   setRole('student');
 })();
 </script>
