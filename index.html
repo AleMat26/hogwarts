@@ -25,18 +25,6 @@ html, body {
 body {
   background: radial-gradient(circle at 50% 0%, #26314c 0, #101522 38%, #070910 78%);
 }
-/* Ingresso nella Sala Grande: animazione discreta, senza interferire con i controlli. */
-@keyframes grandEntrance {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-header { animation: grandEntrance .8s ease-out both; }
-main > * { animation: grandEntrance .65s ease-out both; }
-main > *:nth-child(2) { animation-delay: .08s; }
-main > *:nth-child(3) { animation-delay: .14s; }
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation: none !important; scroll-behavior: auto !important; }
-}
 #app {
   min-height: 100vh;
   background: linear-gradient(180deg, rgba(7,9,16,.12), rgba(7,9,16,.78));
@@ -182,6 +170,21 @@ main {
 .house-students-empty { color: var(--muted); font-family: system-ui, sans-serif; }
 .house-student-line { display:flex; justify-content:space-between; gap:12px; padding:10px 12px; border:1px solid #3f3b32; border-radius:10px; font-family:system-ui,sans-serif; }
 .house-student-line span:last-child { color:var(--gold); white-space:nowrap; }
+.house-stats { display:grid; gap:5px; margin-top:14px; padding-top:12px; border-top:1px solid #ffffff18; color:#d9d2c1; font:12px/1.45 system-ui,sans-serif; }
+.house-stats b { color:var(--gold); font-weight:700; }
+.ranking-row { display:grid; grid-template-columns:minmax(130px,1fr) auto auto; align-items:center; gap:10px; padding:12px 14px; border:1px solid #3f3b32; border-radius:10px; font-family:system-ui,sans-serif; }
+.ranking-row.leader { border-color:var(--gold); background:linear-gradient(90deg,#d8b56a18,transparent); }
+.ranking-detail { color:var(--muted); font-size:12px; text-align:right; }
+.house-search { width:100%; margin:0 0 10px; }
+.student-tools { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 14px; }
+.student-tools input,.student-tools select { flex:1; min-width:190px; }
+.student-actions { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; }
+.btn.small { padding:7px 10px; font-size:12px; }
+.btn.commend { border-color:#bba7e8; color:#e7dcff; }
+.unassigned { color:#f0cb81 !important; border-color:#9a7536 !important; }
+#app { animation: pageReveal .8s ease-out both; }
+@keyframes pageReveal { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+@media(max-width:650px) { .ranking-row { grid-template-columns:1fr auto; } .ranking-detail { grid-column:1/-1; text-align:left; } }
 .house:after {
   content: '';
   position: absolute;
@@ -225,7 +228,7 @@ main {
 .list { display: grid; gap: 8px; font-family: system-ui, sans-serif; }
 .row {
   display: grid;
-  grid-template-columns: minmax(150px, 1fr) 160px 60px auto auto;
+  grid-template-columns: 1fr 160px 60px auto;
   gap: 8px;
   align-items: center;
   padding: 10px 12px;
@@ -247,9 +250,6 @@ main {
   line-height: 1.5;
 }
 .step b { color: #fff; display: block; margin-bottom: 5px; }
-.btn.encomio { padding: 7px 10px; color: #f0d58a; border-color: #8a713b; white-space: nowrap; }
-.cup-leader { border-color: var(--gold) !important; background: linear-gradient(100deg, #332a18, #171923) !important; }
-.cup-label { color: var(--gold); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; margin-left: 8px; }
 
 .modal {
   position: fixed;
@@ -345,13 +345,14 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   <!-- ELENCO STUDENTI DELLA CASATA (SOLO DOCENTE) -->
   <section class="card" id="houseStudentsPanel" style="display:none" aria-live="polite">
     <h3 id="houseStudentsTitle">Studenti della Casata</h3>
+    <input id="houseSearch" class="house-search" type="search" placeholder="Cerca uno studente in questa Casata…" aria-label="Cerca studente nella Casata">
     <div id="houseStudentsList" class="list"></div>
   </section>
 
   <!-- CLASSIFICA -->
   <section class="card" id="ranking">
     <h3>🏆 Coppa delle Case</h3>
-    <p style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La classifica aggiornata delle quattro Casate.</p>
+    <p id="rankingLead" style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La Coppa si accende quando le Casate iniziano a conquistare punti.</p>
     <div id="rankingList" class="list"></div>
   </section>
 
@@ -361,6 +362,15 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
       <input id="studentName" placeholder="Nome e cognome (premi Invio)" style="flex:1;min-width:220px;">
       <button type="button" class="btn primary" id="addStudent">＋ Aggiungi studente</button>
+    </div>
+    <div class="student-tools">
+      <input id="studentSearch" type="search" placeholder="Cerca per nome…" aria-label="Cerca studente">
+      <select id="houseFilter" aria-label="Filtra per Casata">
+        <option value="all">Tutte le Casate</option>
+        <option value="g">Grifondoro</option><option value="t">Tassorosso</option>
+        <option value="r">Corvonero</option><option value="s">Serpeverde</option>
+        <option value="unassigned">Da smistare</option>
+      </select>
     </div>
     <div id="classList" class="list"></div>
   </section>
@@ -377,6 +387,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       </label>
       <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div>
       <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
+      <button type="button" class="btn commend" id="commendBtn">✨ Encomio speciale · +1 punto</button>
     </div>
     <div id="gradeHistory" class="list" style="margin-top:18px"></div>
   </section>
@@ -431,17 +442,34 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
   }
 
   function render(){
-    let t = totals();
+    const t = totals();
     Object.keys(t).forEach(k => {
-      let el = document.querySelector(`[data-house="${k}"]`);
-      if(el) el.textContent = t[k] + ' punti';
+      const el = document.querySelector(`[data-house="${k}"]`);
+      if(el) el.textContent = formatPoints(t[k]) + ' punti';
+      const card = document.querySelector(`[data-house-card="${k}"]`);
+      if(card){
+        const members = state.students.filter(st => st.house === k);
+        const avg = members.length ? members.reduce((sum, st) => sum + (Number(st.points) || 0), 0) / members.length : 0;
+        const best = members.slice().sort((a,b) => (Number(b.points)||0) - (Number(a.points)||0) || a.name.localeCompare(b.name,'it'))[0];
+        let stats = card.querySelector('.house-stats');
+        if(!stats){ stats = document.createElement('div'); stats.className = 'house-stats'; card.appendChild(stats); }
+        stats.innerHTML = `<div>Studenti: <b>${members.length}</b></div><div>Media: <b>${formatPoints(avg)} punti</b></div><div>In testa: <b>${best ? esc(best.name) + ' (' + formatPoints(best.points || 0) + ')' : '—'}</b></div>`;
+      }
     });
 
-    const ranked = Object.entries(t).sort((a,b) => b[1] - a[1]);
-    const topScore = ranked[0]?.[1] ?? 0;
-    $('rankingList').innerHTML = ranked
-      .map(([k, v], i) => `<div class="${i === 0 && topScore > 0 ? 'cup-leader' : ''}" style="display:flex;justify-content:space-between;align-items:center;padding:11px 14px;border:1px solid #3f3b32;border-radius:10px"><span>${i === 0 && topScore > 0 ? '🏆 ' : ''}${i+1}. ${houses[k]}${i === 0 && topScore > 0 ? '<span class="cup-label">In testa</span>' : ''}</span><b>${v} punti</b></div>`)
-      .join('');
+    const ranking = Object.entries(t).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
+    const lead = ranking[0];
+    const leaders = ranking.filter(([,v]) => v === lead[1]);
+    $('rankingLead').textContent = lead[1] === 0
+      ? 'La Coppa si accende quando le Casate iniziano a conquistare punti.'
+      : leaders.length > 1 ? 'Parità in testa: ' + leaders.map(([k]) => houses[k]).join(' e ') + '!'
+      : 'In testa: ' + houses[lead[0]] + ' · ' + formatPoints(lead[1]) + ' punti';
+    $('rankingList').innerHTML = ranking.map(([k,v],i) => {
+      const gap = i === 0 ? null : v - ranking[i-1][1];
+      const tied = i > 0 && v === ranking[i-1][1];
+      const detail = i === 0 ? (leaders.length > 1 ? '🏆 In testa a pari merito' : '🏆 In testa') : (tied ? 'A pari punti' : 'Distacco: ' + formatPoints(Math.abs(gap)) + ' pt');
+      return `<div class="ranking-row ${i===0 ? 'leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${formatPoints(v)} punti</b><span class="ranking-detail">${detail}</span></div>`;
+    }).join('');
 
     document.querySelectorAll('.house').forEach(card => {
       const isTeacher = role === 'teacher';
@@ -460,43 +488,46 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     }
   }
 
+  const formatPoints = n => Number((Number(n) || 0).toFixed(2)).toLocaleString('it-IT', { maximumFractionDigits: 2 });
+
   function renderHouseStudents(){
     if(role !== 'teacher' || !selectedHouse) {
       $('houseStudentsPanel').style.display = 'none';
       return;
     }
-    const members = state.students
-      .filter(s => s.house === selectedHouse)
-      .slice()
-      .sort((a, b) => a.name.localeCompare(b.name, 'it'));
+    const query = ($('houseSearch').value || '').trim().toLocaleLowerCase('it');
+    const members = state.students.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
+      .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
     $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse];
-    $('houseStudentsList').innerHTML = members.map(s =>
-      `<div class="house-student-line"><b>${esc(s.name)}</b><span>${s.points || 0} punti</span></div>`
-    ).join('') || '<div class="house-students-empty">Nessuno studente assegnato a questa Casata.</div>';
+    $('houseStudentsList').innerHTML = members.map(st =>
+      `<div class="house-student-line"><b>${esc(st.name)}</b><span>${formatPoints(st.points || 0)} punti</span></div>`
+    ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
     $('houseStudentsPanel').style.display = 'block';
   }
 
   function renderTeacher(){
     const previouslySelected = $('pointsStudent').value;
-    $('classList').innerHTML = state.students.map(s => 
+    const query = ($('studentSearch').value || '').trim().toLocaleLowerCase('it');
+    const filter = $('houseFilter').value || 'all';
+    const visible = state.students.filter(st => {
+      const nameMatch = st.name.toLocaleLowerCase('it').includes(query);
+      const houseMatch = filter === 'all' || (filter === 'unassigned' ? !st.house : st.house === filter);
+      return nameMatch && houseMatch;
+    }).slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
+    $('classList').innerHTML = visible.map(st =>
       `<div class="row">
-        <b>${esc(s.name)}</b>
-        <span style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${s.house ? houses[s.house] : 'Non assegnata'}</span>
-        <span>${s.points || 0} pt</span>
-        <button type="button" class="btn encomio" data-encomio="${s.id}" title="Assegna un punto per encomio speciale" ${s.house ? '' : 'disabled'}>＋1 Encomio</button>
-        <button type="button" class="btn remove" data-id="${s.id}">🗑️</button>
+        <b>${esc(st.name)}</b>
+        <span class="${st.house ? '' : 'unassigned'}" style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${st.house ? houses[st.house] : '🎩 Da smistare'}</span>
+        <span>${formatPoints(st.points || 0)} pt</span>
+        <div class="student-actions"><button type="button" class="btn small" data-edit="${st.id}">✎ Rinomina</button><button type="button" class="btn small commend" data-commend="${st.id}">✨ Encomio +1</button><button type="button" class="btn small remove" data-id="${st.id}">🗑 Rimuovi</button></div>
       </div>`
-    ).join('') || 'Nessuno studente inserito.';
+    ).join('') || '<div class="house-students-empty">Nessuno studente corrisponde ai filtri.</div>';
 
-    $('pointsStudent').innerHTML = state.students
-      .filter(s => s.house)
-      .map(s => `<option value="${s.id}">${esc(s.name)} — ${houses[s.house]}</option>`)
-      .join('');
-    if ([...$('pointsStudent').options].some(o => o.value === previouslySelected)) {
-      $('pointsStudent').value = previouslySelected;
-    }
-
-    $('sortBtn').disabled = !state.students.length || state.students.every(s => s.house);
+    $('pointsStudent').innerHTML = state.students.filter(st => st.house)
+      .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
+      .map(st => `<option value="${st.id}">${esc(st.name)} — ${houses[st.house]}</option>`).join('');
+    if ([...$('pointsStudent').options].some(o => o.value === previouslySelected)) $('pointsStudent').value = previouslySelected;
+    $('sortBtn').disabled = !state.students.length || state.students.every(st => st.house);
     history();
   }
 
@@ -506,7 +537,7 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
       ((s.history || []).slice().reverse().map(h => 
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>${h.type === 'encomio' ? 'Encomio speciale' : 'Voto ' + h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
+          <span>${h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : 'Voto ' + h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
           <button type="button" class="del" data-id="${h.id}" title="Rimuovi voto" style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
         </div>`
       ).join('') || '<div>Nessun voto registrato.</div>') : '';
@@ -634,24 +665,42 @@ footer { text-align: center; color: #817b70; font: 12px system-ui, sans-serif; p
     }
   };
 
+  const awardCommendation = id => {
+    const st = state.students.find(x => String(x.id) === String(id));
+    if(!st) return;
+    st.points = (Number(st.points) || 0) + 1;
+    st.history = st.history || [];
+    st.history.push({ id: Date.now(), grade: 'Encomio speciale', points: 1 });
+    save(); render();
+  };
+
   $('classList').onclick = e => {
-    const encomio = e.target.closest('[data-encomio]');
-    if (encomio) {
-      const student = state.students.find(s => String(s.id) === encomio.dataset.encomio);
-      if (!student || !student.house) return;
-      student.points = (student.points || 0) + 1;
-      student.history = student.history || [];
-      student.history.push({ id: Date.now(), type: 'encomio', grade: null, points: 1 });
-      save();
-      render();
-      return;
+    const edit = e.target.closest('[data-edit]');
+    const commend = e.target.closest('[data-commend]');
+    const remove = e.target.closest('.remove');
+    if(edit){
+      const st = state.students.find(x => String(x.id) === edit.dataset.edit);
+      if(!st) return;
+      const name = prompt('Modifica nome e cognome dello studente:', st.name);
+      if(name === null) return;
+      if(!name.trim()){ alert('Il nome non può essere vuoto.'); return; }
+      st.name = name.trim(); save(); render();
+    } else if(commend){
+      const st = state.students.find(x => String(x.id) === commend.dataset.commend);
+      if(st && confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
+    } else if(remove && confirm('Rimuovere questo studente e il suo storico?')){
+      state.students = state.students.filter(st => String(st.id) !== remove.dataset.id);
+      save(); render();
     }
-    const b = e.target.closest('.remove');
-    if(b && confirm('Rimuovere questo studente?')){
-      state.students = state.students.filter(s => String(s.id) !== b.dataset.id);
-      save();
-      render();
-    }
+  };
+
+  $('studentSearch').addEventListener('input', renderTeacher);
+  $('houseFilter').addEventListener('change', renderTeacher);
+  $('houseSearch').addEventListener('input', renderHouseStudents);
+  $('commendBtn').onclick = () => {
+    const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
+    if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
+    if(confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
   };
 
   $('sortBtn').onclick = () => {
