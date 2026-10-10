@@ -919,7 +919,7 @@ input, select, .authbox input {
       <label style="font-family:system-ui,sans-serif">Voto
         <input id="gradeInput" type="number" min="1" max="10" step="0.5" placeholder="es. 8,5 (premi Invio)" style="width:100%;margin-top:5px;">
       </label>
-      <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto per calcolare il punteggio.</div>
+      <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto da 1 a 10</div>
       <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
       <button type="button" class="btn commend" id="commendBtn">✨ Encomio speciale +1 punto</button>
       <button type="button" class="btn" id="malusBtn">⚖️ Malus −1 punto</button>
@@ -1167,7 +1167,7 @@ input, select, .authbox input {
     $('pointsCard').style.display = role === 'teacher' && teacherView === 'class' && $('pointsBtn').classList.contains('primary') ? 'block' : 'none';
 
     document.querySelectorAll('.house').forEach(card => {
-      const isTeacher = role === 'teacher' && teacherView === 'class';
+      const isTeacher = role === 'teacher' && ['class','castle'].includes(teacherView);
       card.classList.toggle('clickable', isTeacher);
       card.classList.toggle('selected', isTeacher && card.dataset.houseCard === selectedHouse);
       card.tabIndex = isTeacher ? 0 : -1;
@@ -1203,19 +1203,35 @@ input, select, .authbox input {
   }
 
   function renderHouseStudents(){
-    if(role !== 'teacher' || teacherView !== 'class' || !selectedHouse) {
+    if(role !== 'teacher' || !selectedHouse || !['class','castle'].includes(teacherView)) {
       $('houseStudentsPanel').style.display = 'none';
       return;
     }
-    const shownClass = activeClass();
-    const shownStudents = shownClass ? shownClass.students : [];
     const query = ($('houseSearch').value || '').trim().toLocaleLowerCase('it');
-    const members = shownStudents.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
-      .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
-    $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + (shownClass ? ' · ' + shownClass.name : '');
-    $('houseStudentsList').innerHTML = members.map(st =>
-      `<div class="house-student-line"><b>${esc(st.name)}</b><span>${formatPoints(st.points || 0)} punti</span></div>`
-    ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
+    let members = [];
+    if(teacherView === 'castle') {
+      // Nel Castello includiamo soltanto classi attive, ordinate per sezione e poi per anno;
+      // all'interno di ogni classe gli studenti sono in ordine alfabetico.
+      const orderedClasses = state.classes.filter(c => !c.archived).slice().sort(compareClasses);
+      orderedClasses.forEach(c => {
+        c.students.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
+          .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
+          .forEach(st => members.push({ ...st, className: c.name }));
+      });
+      $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + ' · Castello';
+      $('houseStudentsList').innerHTML = members.map(st =>
+        `<div class="house-student-line"><b>${esc(st.name)}</b><span>${esc(st.className)}</span></div>`
+      ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata nelle classi attive.'}</div>`;
+    } else {
+      const shownClass = activeClass();
+      const shownStudents = shownClass ? shownClass.students : [];
+      members = shownStudents.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
+        .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
+      $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + (shownClass ? ' · ' + shownClass.name : '');
+      $('houseStudentsList').innerHTML = members.map(st =>
+        `<div class="house-student-line"><b>${esc(st.name)}</b><span>${formatPoints(st.points || 0)} punti</span></div>`
+      ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
+    }
     $('houseStudentsPanel').style.display = 'block';
   }
 
@@ -1307,7 +1323,7 @@ input, select, .authbox input {
   // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
   document.querySelectorAll('.house').forEach(card => {
     const openHouse = () => {
-      if(role !== 'teacher' || teacherView !== 'class') return;
+      if(role !== 'teacher' || !['class','castle'].includes(teacherView)) return;
       const key = card.dataset.houseCard;
       selectedHouse = selectedHouse === key ? null : key;
       // Aprire l'elenco della Casata chiude sempre i pannelli operativi.
@@ -1514,8 +1530,10 @@ input, select, .authbox input {
     teacherView = 'castle';
     resetPointsSelection = true;
     $('gradeInput').value = '';
-    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10.';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10';
     selectedHouse = null;
+    $('houseSearch').value = '';
+    $('houseStudentsPanel').style.display = 'none';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
     $('manageBtn').classList.remove('primary');
@@ -1527,11 +1545,14 @@ input, select, .authbox input {
   // Le schede operative si aprono sotto ai pulsanti senza spostare la pagina.
   // La scheda selezionata resta aperta anche se si riclicca sul suo pulsante.
   $('manageBtn').onclick = () => {
+    selectedHouse = null;
+    $('houseStudentsPanel').style.display = 'none';
+    document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
     teacherView = 'class';
     resetPointsSelection = true;
     $('pointsStudent').selectedIndex = $('pointsStudent').options.length ? 0 : -1;
     $('gradeInput').value = '';
-    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10.';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10';
     history();
     $('castleViewBtn').style.display = 'inline-block';
     $('classCard').style.display = 'block';
@@ -1541,11 +1562,14 @@ input, select, .authbox input {
   };
 
   $('pointsBtn').onclick = () => {
+    selectedHouse = null;
+    $('houseStudentsPanel').style.display = 'none';
+    document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
     teacherView = 'class';
     resetPointsSelection = true;
     $('pointsStudent').selectedIndex = $('pointsStudent').options.length ? 0 : -1;
     $('gradeInput').value = '';
-    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10.';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10';
     history();
     $('castleViewBtn').style.display = 'inline-block';
     $('pointsCard').style.display = 'block';
@@ -1804,7 +1828,7 @@ input, select, .authbox input {
     let v = parseFloat($('gradeInput').value);
     $('pointPreview').textContent = Number.isFinite(v) && v >= 1 && v <= 10 ?
       'Voto ' + v + ' → ' + (score(v) >= 0 ? '+' : '') + score(v) + ' punti' :
-      'Inserisci un voto da 1 a 10.';
+      'Inserisci un voto da 1 a 10';
   };
 
   const saveGradeAction = () => {
@@ -1820,6 +1844,7 @@ input, select, .authbox input {
     s.history.push({ id: Date.now(), date: new Date().toISOString(), grade: v, points: p });
     const studentId = String(s.id);
     $('gradeInput').value = '';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10';
     save();
     render();
     $('pointsStudent').value = studentId;
@@ -1849,6 +1874,15 @@ input, select, .authbox input {
       render();
     }
   };
+
+  // Un clic fuori dallo stendardo e dal suo elenco chiude il pannello studenti.
+  document.addEventListener('click', e => {
+    if(role !== 'teacher' || !selectedHouse) return;
+    if(e.target.closest('.house') || e.target.closest('#houseStudentsPanel')) return;
+    selectedHouse = null;
+    $('houseStudentsPanel').style.display = 'none';
+    document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
+  });
 
   save();
   setRole('student');
