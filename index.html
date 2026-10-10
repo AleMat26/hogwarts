@@ -786,6 +786,7 @@ input, select, .authbox input {
 }
 
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="app">
@@ -948,6 +949,14 @@ input, select, .authbox input {
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
   const KEY = 'hogwartsState';
+  // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
+  const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
+  // La pagina torna sempre in modalita pubblica al ricaricamento: non conservare la sessione docente nel localStorage del browser condiviso.
+  const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
+  let supabaseUser = null;
+  let remoteSyncPromise = Promise.resolve();
+  let publicScores = null;
   const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
@@ -1029,8 +1038,8 @@ input, select, .authbox input {
     }
     if(raw && Array.isArray(raw.classes) && raw.classes.length){
       const classes = raw.classes.filter(c => c && typeof c.name === 'string').map((c,i) => ({
-        id: String(c.id || ('class-' + (i+1))), name: c.name,
-        schoolYear: c.schoolYear || DEFAULT_YEAR, students: normalizeStudents(c.students),
+        id: String(c.id || ('class-' + (i+1))), dbId: c.dbId || null, clientId: c.clientId || String(c.id || ('class-' + (i+1))), name: c.name,
+        schoolYear: c.schoolYear || DEFAULT_YEAR, students: normalizeStudents(c.students).map(st => ({...st, dbId: st.dbId || null, clientId: st.clientId || String(st.id)})),
         nextId: Number(c.nextId) || Math.max(0, ...normalizeStudents(c.students).map(st => Number(st.id) || 0)) + 1,
         archived: Boolean(c.archived), resetForDeletion: Boolean(c.resetForDeletion)
       }));
@@ -1054,6 +1063,42 @@ input, select, .authbox input {
   // All'apertura della pagina la homepage parte sempre dal cumulativo.
   // La scelta di una singola classe vale per la visualizzazione corrente, non per la classe gestita dal docente.
   let publicClassId = ALL_ACTIVE_CLASSES;
+  async function loadPublicData(){
+    if(!supabase) return;
+    try {
+      const [{ data: classes, error: classError }, { data: scores, error: scoreError }] = await Promise.all([
+        supabase.rpc('get_public_active_classes'),
+        supabase.rpc('get_public_house_scores')
+      ]);
+      if(classError) throw classError;
+      if(scoreError) throw scoreError;
+      const mappedClasses = (classes || []).map(c => ({
+        id: String(c.class_id), dbId: String(c.class_id), clientId: String(c.class_id), name: c.class_name,
+        schoolYear: c.school_year || DEFAULT_YEAR, archived: false, resetForDeletion: false, nextId: 5,
+        students: []
+      }));
+      publicScores = { all: scores || [], byClass: {} };
+      // Ogni classe viene caricata solo tramite la funzione pubblica aggregata; mai leggere i nomi degli studenti.
+      for(const c of mappedClasses){
+        const { data, error } = await supabase.rpc('get_public_house_scores', { p_class_id: c.dbId });
+        if(error) throw error;
+        publicScores.byClass[c.id] = data || [];
+      }
+      state = normalizeState({ classes: mappedClasses, activeClassId: mappedClasses[0]?.id || null, nextClassId: mappedClasses.length + 1 });
+      publicClassId = ALL_ACTIVE_CLASSES;
+      render();
+    } catch(err) {
+      console.error('Errore caricamento dati pubblici Supabase:', err);
+      $('rankingLead').textContent = 'Non è stato possibile caricare i punteggi dal database. Riprova più tardi.';
+    }
+  }
+  function publicAggregateStudents(){
+    if(!state.classes.some(c => !c.archived)) return [];
+    const selected = publicClass();
+    const rows = selected ? (publicScores?.byClass?.[selected.id] || []) : (publicScores?.all || []);
+    return rows.map((row, i) => ({ id: 'public-' + i, name: '', house: row.house_id, points: Number(row.points) || 0, history: [] }));
+  }
+
   function publicClass(){
     const available = state.classes.filter(c => !c.archived);
     if(!available.length) return null;
@@ -1085,6 +1130,7 @@ input, select, .authbox input {
     const active = activeClass();
     if(active){ active.name = state.className || active.name; active.schoolYear = state.schoolYear || active.schoolYear; active.students = state.students; active.nextId = state.nextId; }
     localStorage.setItem(KEY, JSON.stringify(state));
+    if(supabaseUser && role === 'teacher') queueRemoteSync();
   }
   const score = v => Number((v - 6).toFixed(2));
   
@@ -1140,11 +1186,11 @@ input, select, .authbox input {
     const showingAggregate = role === 'teacher'
       ? teacherView === 'castle'
       : !selectedPublicClass && state.classes.some(c => !c.archived);
-    const displayedStudents = showingAggregate
-      ? state.classes.filter(c => !c.archived).flatMap(c => c.students)
-      : role === 'teacher'
-        ? (teacherClass ? teacherClass.students : [])
-        : publicStudents();
+    const displayedStudents = role !== 'teacher'
+      ? publicAggregateStudents()
+      : showingAggregate
+        ? state.classes.filter(c => !c.archived).flatMap(c => c.students)
+        : (teacherClass ? teacherClass.students : []);
     const t = totals(displayedStudents);
     Object.keys(t).forEach(k => {
       const el = document.querySelector(`[data-house="${k}"]`);
@@ -1157,8 +1203,11 @@ input, select, .authbox input {
         const avg = members.length ? members.reduce((sum, st) => sum + (Number(st.points) || 0), 0) / members.length : 0;
         const best = members.slice().sort((a,b) => (Number(b.points)||0) - (Number(a.points)||0) || a.name.localeCompare(b.name,'it'))[0];
         let stats = card.querySelector('.house-stats');
-        if(!stats){ stats = document.createElement('div'); stats.className = 'house-stats'; card.appendChild(stats); }
-        stats.innerHTML = `<div>Studenti: <b>${members.length}</b></div><div>Media: <b>${formatPoints(avg)} punti</b></div><div>In testa: <b>${best ? esc(best.name) + ' (' + formatPoints(best.points || 0) + ')' : '—'}</b></div>`;
+        if(role !== 'teacher') { if(stats) stats.remove(); }
+        else {
+          if(!stats){ stats = document.createElement('div'); stats.className = 'house-stats'; card.appendChild(stats); }
+          stats.innerHTML = `<div>Studenti: <b>${members.length}</b></div><div>Media: <b>${formatPoints(avg)} punti</b></div><div>In testa: <b>${best ? esc(best.name) + ' (' + formatPoints(best.points || 0) + ')' : '—'}</b></div>`;
+        }
       }
     });
 
@@ -1268,13 +1317,13 @@ input, select, .authbox input {
         <b>${esc(st.name)}</b>
         <span class="${st.house ? '' : 'unassigned'}" style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${st.house ? houses[st.house] : '🎩 Da smistare'}</span>
         <span>${formatPoints(st.points || 0)} pt</span>
-        <div class="student-actions"><button type="button" class="btn small" data-edit="${st.id}">✎ Rinomina</button>${st.house ? `<button type="button" class="btn small" data-assign-points="${st.id}">🏆 Punti</button>` : ''}<button type="button" class="btn small commend" data-commend="${st.id}">✨ Encomio +1</button><button type="button" class="btn small" data-malus="${st.id}">⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${st.id}">🗑 Rimuovi</button></div>
+        <div class="student-actions"><button type="button" class="btn small" data-edit="${esc(st.id)}">✎ Rinomina</button>${st.house ? `<button type="button" class="btn small" data-assign-points="${esc(st.id)}">🏆 Punti</button>` : ''}<button type="button" class="btn small commend" data-commend="${esc(st.id)}">✨ Encomio +1</button><button type="button" class="btn small" data-malus="${esc(st.id)}">⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${esc(st.id)}">🗑 Rimuovi</button></div>
       </div>`
     ).join('') || '<div class="house-students-empty">Nessuno studente corrisponde ai filtri.</div>';
 
     $('pointsStudent').innerHTML = state.students.filter(st => st.house)
       .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
-      .map(st => `<option value="${st.id}">${esc(st.name)} — ${houses[st.house]}</option>`).join('');
+      .map(st => `<option value="${esc(st.id)}">${esc(st.name)} — ${houses[st.house]}</option>`).join('');
     if (previouslySelected && [...$('pointsStudent').options].some(o => o.value === previouslySelected)) {
       $('pointsStudent').value = previouslySelected;
     } else if ($('pointsStudent').options.length) {
@@ -1303,8 +1352,8 @@ input, select, .authbox input {
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
       ((s.history || []).slice().reverse().map(h => 
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>${h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade} → ${h.points >= 0 ? '+' : ''}${h.points} punti</span>
-          <button type="button" class="del" data-id="${h.id}" title="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
+          <span>${esc(h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(h.points)} punti</span>
+          <button type="button" class="del" data-id="${esc(h.id)}" title="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
         </div>`
       ).join('') || '<div>Nessun voto registrato.</div>') : '';
   }
@@ -1389,52 +1438,173 @@ input, select, .authbox input {
   };
 
   $('loginBtn').onclick = async () => {
-    if (loginBusy) return;
+    if(loginBusy) return;
     const email = $('email').value.trim().toLowerCase();
     const password = $('password').value;
-    if (!email || !password) {
-      $('authMessage').textContent = 'Inserisci email e password.';
-      return;
-    }
-    if (!window.crypto || !window.crypto.subtle) {
-      $('authMessage').textContent = 'Il browser non consente la verifica sicura. Apri la pagina con un browser aggiornato.';
-      return;
-    }
-    loginBusy = true;
-    $('loginBtn').disabled = true;
-    $('authMessage').textContent = 'Verifica in corso…';
+    if(!email || !password){ $('authMessage').textContent = 'Inserisci email e password.'; return; }
+    if(!supabase){ $('authMessage').textContent = 'Connessione a Supabase non disponibile. Controlla la connessione Internet.'; return; }
+    loginBusy = true; $('loginBtn').disabled = true; $('authMessage').textContent = 'Accesso in corso…';
     try {
-      const payload = new TextEncoder().encode('hogwarts:' + email + ':' + password);
-      const digest = await window.crypto.subtle.digest('SHA-256', payload);
-      const hash = [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('');
-      // Confronto con il digest SHA-256 della credenziale docente configurata.
-      const valid = email === 'docente@hogwarts.it' && hash === '903a98bf432b5b7277daf84d836e6ec5bc89ac13cde117c460f75e6685c84ec7';
-      if (valid) {
-        failedLogins = 0;
-        setRole('teacher');
-      } else {
-        failedLogins++;
-        $('authMessage').textContent = 'Credenziali non valide.';
-        $('password').value = '';
-        if (failedLogins >= 3) {
-          $('authMessage').textContent = 'Troppi tentativi. Attendi qualche secondo e riprova.';
-          await new Promise(resolve => setTimeout(resolve, 2500));
-          failedLogins = 0;
-        }
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if(error) throw error;
+      supabaseUser = data.user;
+      await loadTeacherData();
+      failedLogins = 0;
+      $('authMessage').textContent = '';
+      $('password').value = '';
+      $('authBox').style.display = 'none';
+      setRole('teacher');
+      showToast('Accesso docente effettuato. Dati caricati da Supabase.');
+    } catch(err) {
+      console.error('Errore accesso Supabase:', err);
+      // Se l'autenticazione era riuscita ma il caricamento dei dati è fallito,
+      // non lasciare una sessione autenticata nascosta dietro la schermata pubblica.
+      if(supabaseUser) {
+        supabaseUser = null;
+        try { await supabase.auth.signOut(); } catch(signOutError) { console.warn('Logout dopo accesso incompleto non riuscito:', signOutError); }
       }
-    } catch (err) {
-      $('authMessage').textContent = 'Non è stato possibile verificare le credenziali. Riprova.';
-    } finally {
-      loginBusy = false;
-      $('loginBtn').disabled = false;
-    }
+      failedLogins++;
+      const message = err && typeof err.message === 'string' ? err.message : '';
+      $('authMessage').textContent = (message.startsWith('Importazione iniziale dei dati locali non riuscita') || message.startsWith('Importazione iniziale annullata') || message.startsWith('Sincronizzazione bloccata per sicurezza'))
+        ? message
+        : 'Accesso non riuscito. Verifica email e password del tuo account Supabase.';
+      $('password').value = '';
+      if(failedLogins >= 3 && !$('authMessage').textContent.startsWith('Importazione iniziale')){ $('authMessage').textContent += ' Controlla anche che l’utente sia abilitato in Supabase Auth.'; failedLogins = 0; }
+    } finally { loginBusy = false; $('loginBtn').disabled = false; }
   };
 
   $('password').onkeydown = e => {
     if(e.key === 'Enter') $('loginBtn').click();
   };
 
-  $('logoutBtn').onclick = () => setRole('student');
+  $('logoutBtn').onclick = async () => {
+    try { if(supabase) await supabase.auth.signOut(); } catch(e) { console.warn(e); }
+    supabaseUser = null; setRole('student'); await loadPublicData();
+  };
+
+  async function loadTeacherData(){
+    if(!supabase || !supabaseUser) throw new Error('Sessione docente mancante.');
+    const { data: remoteClasses, error: classError } = await supabase.from('classes').select('id,client_id,name,school_year,archived,reset_for_deletion,created_at').order('created_at');
+    if(classError) throw classError;
+    // Se il database è ancora vuoto ma questo browser contiene classi locali, chiediamo esplicitamente se importarle.
+    // In questo modo il primo accesso non sovrascrive silenziosamente il lavoro preesistente.
+    if((remoteClasses || []).length === 0){
+      try {
+        const localRaw = JSON.parse(localStorage.getItem(KEY) || 'null');
+        const localCandidate = localRaw ? normalizeState(localRaw) : null;
+        if(localCandidate && localCandidate.classes.length){
+          const importLocal = confirm('Il database Supabase è vuoto, ma questo browser contiene ' + localCandidate.classes.length + ' classi locali. Vuoi importarle nel database per renderle disponibili anche sugli altri dispositivi?');
+          if(!importLocal){
+            // Annullare non deve significare caricare lo stato remoto vuoto e cancellare la copia locale.
+            throw new Error('Importazione iniziale annullata. I dati locali sono stati conservati; accedi di nuovo quando vuoi scegliere come procedere.');
+          }
+          state = localCandidate;
+          saveLocalOnly();
+          try {
+            await syncTeacherData();
+          } catch(syncError) {
+            // Non continuare caricando uno stato remoto vuoto: preserva il backup locale.
+            throw new Error('Importazione iniziale dei dati locali non riuscita. I dati locali sono stati conservati; controlla la connessione e riprova.');
+          }
+          render();
+          return;
+        }
+      } catch(localImportError) {
+        console.warn('Non è stato possibile importare automaticamente i dati locali:', localImportError);
+        if(localImportError && typeof localImportError.message === 'string' && (localImportError.message.startsWith('Importazione iniziale dei dati locali non riuscita') || localImportError.message.startsWith('Importazione iniziale annullata'))) throw localImportError;
+      }
+    }
+    const classes = [];
+    for(const rc of (remoteClasses || [])){
+      const { data: remoteStudents, error: studentError } = await supabase.from('students').select('id,client_id,name,house_id,points,created_at').eq('class_id', rc.id).order('created_at');
+      if(studentError) throw studentError;
+      const students = [];
+      for(const rs of (remoteStudents || [])){
+        const { data: remoteHistory, error: historyError } = await supabase.from('grades').select('id,history_id,grade,points,entry_type,created_at').eq('student_id', rs.id).order('created_at');
+        if(historyError) throw historyError;
+        const history = (remoteHistory || []).map(h => ({
+          id: h.history_id || String(h.id), date: h.created_at,
+          grade: h.entry_type === 'encomio' ? 'Encomio speciale' : h.entry_type === 'malus' ? 'Malus' : h.grade,
+          points: Number(h.points) || 0, dbId: h.id
+        }));
+        students.push({ id: rs.client_id || String(rs.id), dbId: String(rs.id), clientId: rs.client_id || String(rs.id), name: rs.name, house: ['g','t','r','s'].includes(rs.house_id) ? rs.house_id : null, points: Number(rs.points) || 0, history });
+      }
+      classes.push({ id: rc.client_id || String(rc.id), dbId: String(rc.id), clientId: rc.client_id || String(rc.id), name: rc.name, schoolYear: rc.school_year || DEFAULT_YEAR, students, nextId: Math.max(0,...students.map(st => Number(st.id)||0))+1, archived: Boolean(rc.archived), resetForDeletion: Boolean(rc.reset_for_deletion) });
+    }
+    const active = classes.find(c => !c.archived) || classes[0] || null;
+    state = normalizeState({ classes, activeClassId: active?.id || null, nextClassId: classes.length + 1 });
+    if(!state.classes.length){ state.className = 'Castello'; state.students = []; state.activeClassId = null; }
+    saveLocalOnly();
+    render();
+  }
+  function saveLocalOnly(){
+    const active = activeClass();
+    if(active){ active.name = state.className || active.name; active.schoolYear = state.schoolYear || active.schoolYear; active.students = state.students; active.nextId = state.nextId; }
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e) { console.warn('Salvataggio locale non disponibile', e); }
+  }
+  function queueRemoteSync(){
+    if(!supabase || !supabaseUser) return;
+    remoteSyncPromise = remoteSyncPromise.then(() => syncTeacherData()).catch(err => {
+      console.error('Sincronizzazione Supabase non riuscita:', err);
+      showToast('Modifiche salvate nel browser, ma la sincronizzazione Supabase non è riuscita. Controlla la connessione.');
+    });
+  }
+  async function syncTeacherData(){
+    if(!supabase || !supabaseUser) return;
+    const { data: currentClasses, error: readClassesError } = await supabase.from('classes').select('id,client_id').eq('teacher_id', supabaseUser.id);
+    if(readClassesError) throw readClassesError;
+    // Protezione anti-cancellazione: uno stato locale vuoto non deve mai eliminare in blocco le classi cloud.
+    // Se si desidera supportare l'eliminazione intenzionale di tutte le classi, servirà un flusso esplicito e confermato.
+    if((currentClasses || []).length > 0 && (!Array.isArray(state.classes) || state.classes.length === 0)){
+      throw new Error('Sincronizzazione bloccata per sicurezza: lo stato locale non contiene classi, ma Supabase sì. I dati cloud non sono stati cancellati. Ricarica i dati o ripristina un backup valido.');
+    }
+    const remoteClassByClient = new Map((currentClasses || []).map(c => [c.client_id, c.id]));
+    const retainedClassIds = new Set();
+    for(const c of state.classes){
+      const payload = { teacher_id: supabaseUser.id, client_id: c.clientId || String(c.id), name: c.name, school_year: c.schoolYear || DEFAULT_YEAR, archived: Boolean(c.archived), reset_for_deletion: Boolean(c.resetForDeletion) };
+      const existingId = remoteClassByClient.get(payload.client_id);
+      let result = existingId
+        ? await supabase.from('classes').update(payload).eq('id', existingId).select('id').single()
+        : await supabase.from('classes').insert(payload).select('id').single();
+      if(result.error) throw result.error;
+      c.dbId = result.data.id; retainedClassIds.add(String(result.data.id));
+      const { data: existingStudents, error: existingStudentsError } = await supabase.from('students').select('id,client_id').eq('class_id', c.dbId);
+      if(existingStudentsError) throw existingStudentsError;
+      const remoteStudentByClient = new Map((existingStudents || []).map(st => [st.client_id, st.id]));
+      const retainedStudentIds = new Set();
+      for(const st of c.students){
+        const studentClientId = st.clientId || String(st.id);
+        const studentPayload = { class_id: c.dbId, client_id: studentClientId, name: st.name, house_id: st.house || null, points: Number(st.points) || 0 };
+        const existingStudentId = remoteStudentByClient.get(studentClientId);
+        const sr = existingStudentId
+          ? await supabase.from('students').update(studentPayload).eq('id', existingStudentId).select('id').single()
+          : await supabase.from('students').insert(studentPayload).select('id').single();
+        if(sr.error) throw sr.error;
+        st.dbId = sr.data.id; retainedStudentIds.add(String(sr.data.id));
+        const { data: existingGrades, error: gradesError } = await supabase.from('grades').select('id,history_id').eq('student_id', st.dbId);
+        if(gradesError) throw gradesError;
+        const retainedHistoryIds = new Set();
+        for(const h of (st.history || [])){
+          const hid = String(h.id);
+          const entryType = h.grade === 'Encomio speciale' ? 'encomio' : h.grade === 'Malus' ? 'malus' : 'voto';
+          const numericGrade = entryType === 'voto' && Number.isFinite(Number(h.grade)) ? Number(h.grade) : null;
+          const gradePayload = { student_id: st.dbId, history_id: hid, grade: numericGrade, points: Number(h.points) || 0, entry_type: entryType };
+          const found = (existingGrades || []).find(g => String(g.history_id) === hid);
+          const gr = found
+            ? await supabase.from('grades').update(gradePayload).eq('id', found.id).select('id').single()
+            : await supabase.from('grades').insert(gradePayload).select('id').single();
+          if(gr.error) throw gr.error;
+          retainedHistoryIds.add(String(gr.data.id));
+        }
+        const staleGrades = (existingGrades || []).filter(g => !retainedHistoryIds.has(String(g.id))).map(g => g.id);
+        if(staleGrades.length){ const { error } = await supabase.from('grades').delete().in('id', staleGrades); if(error) throw error; }
+      }
+      const staleStudents = (existingStudents || []).filter(st => !retainedStudentIds.has(String(st.id))).map(st => st.id);
+      if(staleStudents.length){ const { error } = await supabase.from('students').delete().in('id', staleStudents); if(error) throw error; }
+    }
+    const staleClasses = (currentClasses || []).filter(c => !retainedClassIds.has(String(c.id))).map(c => c.id);
+    if(staleClasses.length){ const { error } = await supabase.from('classes').delete().in('id', staleClasses); if(error) throw error; }
+  }
 
   function switchClass(classId){
     const target = state.classes.find(c => c.id === String(classId));
@@ -1514,7 +1684,7 @@ input, select, .authbox input {
       alert('Esiste già una classe con questo nome nello stesso anno scolastico.'); return;
     }
     const id = 'class-' + state.nextClassId++;
-    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: [], nextId: 1, archived: false, resetForDeletion: false });
+    state.classes.push({ id, clientId: id, name: cleanName, schoolYear: cleanYear, students: [], nextId: 1, archived: false, resetForDeletion: false });
     switchClass(id);
   };
 
@@ -1558,10 +1728,10 @@ input, select, .authbox input {
       try { localStorage.setItem(PUBLIC_CLASS_KEY, publicClassId); } catch(e) {}
     }
     const promotedStudents = current.students.map((st, index) => ({
-      id: index + 1, name: st.name, house: st.house, points: 0, history: []
+      id: index + 1, clientId: String(index + 1), name: st.name, house: st.house, points: 0, history: []
     }));
     const id = 'class-' + state.nextClassId++;
-    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false, resetForDeletion: false });
+    state.classes.push({ id, clientId: id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false, resetForDeletion: false });
     switchClass(id);
     showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.');
   };
@@ -1675,16 +1845,33 @@ input, select, .authbox input {
     const malus = e.target.closest('[data-malus]');
     const remove = e.target.closest('.remove');
     if(assignPoints){
+      // Questo clic apre la scheda Punti: non deve arrivare al gestore globale
+      // che chiude le schede quando si clicca sullo sfondo. render() sostituisce
+      // la lista e altrimenti il target perde il suo antenato #classList.
+      e.preventDefault();
+      e.stopPropagation();
       const st = state.students.find(x => String(x.id) === assignPoints.dataset.assignPoints);
       if(!st || !st.house) return;
+
+      // Apri la scheda Punti direttamente sullo studente selezionato.
+      // La selezione viene impostata dopo il render per evitare che venga sostituita.
       teacherView = 'class';
+      resetPointsSelection = false;
+      selectedHouse = null;
+      $('houseStudentsPanel').style.display = 'none';
       $('castleViewBtn').style.display = 'inline-block';
       $('classCard').style.display = 'none';
       $('pointsCard').style.display = 'block';
       $('manageBtn').classList.remove('primary');
       $('pointsBtn').classList.add('primary');
+      $('gradeInput').value = '';
+      $('pointPreview').textContent = 'Inserisci un voto da 1 a 10';
       render();
-      $('pointsStudent').value = String(st.id);
+      const studentSelect = $('pointsStudent');
+      const targetId = String(st.id);
+      if([...studentSelect.options].some(option => option.value === targetId)) {
+        studentSelect.value = targetId;
+      }
       history();
       $('pointsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       $('gradeInput').focus({ preventScroll: true });
@@ -1923,45 +2110,110 @@ input, select, .authbox input {
     };
   }
   function validateBackupState(raw) {
-    if(!raw || typeof raw !== 'object') throw new Error('Il contenuto non è un oggetto valido.');
-    const hasClasses = Array.isArray(raw.classes);
-    if(hasClasses) {
+    const MAX_CLASSES = 100;
+    const MAX_STUDENTS_PER_CLASS = 500;
+    const MAX_HISTORY_PER_STUDENT = 5000;
+    const MAX_NAME_LENGTH = 200;
+    const MAX_CLASS_NAME_LENGTH = 100;
+    const MAX_ID_LENGTH = 128;
+    const validId = (value, label) => {
+      if(value == null) return;
+      if(!['string','number'].includes(typeof value) || (typeof value === 'number' && !Number.isFinite(value))) {
+        throw new Error(label + ': identificativo non valido.');
+      }
+      if(String(value).length > MAX_ID_LENGTH) throw new Error(label + ': identificativo troppo lungo.');
+    };
+    const validText = (value, label, maxLength) => {
+      if(typeof value !== 'string' || !value.trim() || value.length > maxLength) {
+        throw new Error(label + ': testo mancante o troppo lungo.');
+      }
+    };
+    const validPoints = (value, label) => {
+      if(value != null && (typeof value !== 'number' || !Number.isFinite(value) || Math.abs(value) > 1000000)) {
+        throw new Error(label + ': punteggio non valido.');
+      }
+    };
+    const validateStudent = (st, studentIds, studentClientIds) => {
+      if(!st || typeof st !== 'object' || Array.isArray(st)) throw new Error('È presente uno studente non valido.');
+      validText(st.name, 'Nome dello studente', MAX_NAME_LENGTH);
+      if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casata non riconosciuta.');
+      validPoints(st.points, 'Punteggio dello studente');
+      validId(st.id, 'Studente');
+      validId(st.clientId, 'Identificativo client dello studente');
+      validId(st.dbId, 'Identificativo database dello studente');
+      if(st.id != null) {
+        const id = String(st.id);
+        if(studentIds.has(id)) throw new Error('Sono presenti identificativi di studente duplicati nella stessa classe.');
+        studentIds.add(id);
+      }
+      if(st.clientId != null) {
+        const clientId = String(st.clientId);
+        if(studentClientIds.has(clientId)) throw new Error('Sono presenti identificativi client di studente duplicati nella stessa classe.');
+        studentClientIds.add(clientId);
+      }
+      if(st.history != null && !Array.isArray(st.history)) throw new Error('Lo storico di uno studente non è valido.');
+      const history = st.history || [];
+      if(history.length > MAX_HISTORY_PER_STUDENT) throw new Error('Lo storico di uno studente contiene troppe voci.');
+      const historyIds = new Set();
+      for(const h of history) {
+        if(!h || typeof h !== 'object' || Array.isArray(h)) throw new Error('Una voce dello storico è incompleta o non valida.');
+        validId(h.id, 'Identificativo dello storico');
+        if(h.id != null) {
+          const id = String(h.id);
+          if(historyIds.has(id)) throw new Error('Sono presenti identificativi duplicati nello storico di uno studente.');
+          historyIds.add(id);
+        }
+        validPoints(h.points, 'Punteggio dello storico');
+        if(h.grade !== 'Encomio speciale' && h.grade !== 'Malus') {
+          const grade = Number(h.grade);
+          if(h.grade == null || (typeof h.grade !== 'number' && typeof h.grade !== 'string') || !Number.isFinite(grade) || grade < 1 || grade > 10) {
+            throw new Error('Una voce dello storico contiene un voto non valido.');
+          }
+        }
+        if(h.date != null && (typeof h.date !== 'string' || h.date.length > 100)) throw new Error('Una data dello storico non è valida.');
+      }
+    };
+
+    if(!raw || typeof raw !== 'object' || Array.isArray(raw)) throw new Error('Il contenuto non è un oggetto valido.');
+    if(Array.isArray(raw.classes)) {
       if(raw.classes.length === 0) throw new Error('Il backup non contiene classi.');
+      if(raw.classes.length > MAX_CLASSES) throw new Error('Il backup contiene troppe classi.');
       const classIds = new Set();
+      const classClientIds = new Set();
       for(const c of raw.classes) {
-        if(!c || typeof c !== 'object' || typeof c.name !== 'string' || !c.name.trim() || !Array.isArray(c.students)) throw new Error('Una classe è incompleta o non valida.');
+        if(!c || typeof c !== 'object' || Array.isArray(c)) throw new Error('Una classe è incompleta o non valida.');
+        validText(c.name, 'Nome della classe', MAX_CLASS_NAME_LENGTH);
+        if(c.schoolYear != null && (typeof c.schoolYear !== 'string' || c.schoolYear.length > 40)) throw new Error('Anno scolastico non valido.');
+        if(!Array.isArray(c.students)) throw new Error('Una classe non contiene un elenco studenti valido.');
+        if(c.students.length > MAX_STUDENTS_PER_CLASS) throw new Error('Una classe contiene troppi studenti.');
+        validId(c.id, 'Classe');
+        validId(c.clientId, 'Identificativo client della classe');
+        validId(c.dbId, 'Identificativo database della classe');
         if(c.id != null) {
           const id = String(c.id);
           if(classIds.has(id)) throw new Error('Sono presenti identificativi di classe duplicati.');
           classIds.add(id);
         }
-        const studentIds = new Set();
-        for(const st of c.students) {
-          if(!st || typeof st !== 'object' || typeof st.name !== 'string' || !st.name.trim()) throw new Error('È presente uno studente senza nome valido.');
-          if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casata non riconosciuta.');
-          if(st.points != null && (typeof st.points !== 'number' || !Number.isFinite(st.points))) throw new Error('È presente un punteggio non valido.');
-          if(st.id != null) {
-            const id = String(st.id);
-            if(studentIds.has(id)) throw new Error('Sono presenti identificativi di studente duplicati nella stessa classe.');
-            studentIds.add(id);
-          }
-          if(st.history != null && !Array.isArray(st.history)) throw new Error('Lo storico di uno studente non è valido.');
-          for(const h of (st.history || [])) {
-            if(!h || typeof h !== 'object' || (h.points != null && (typeof h.points !== 'number' || !Number.isFinite(h.points)))) throw new Error('Una voce dello storico è incompleta o non valida.');
-          }
+        if(c.clientId != null) {
+          const clientId = String(c.clientId);
+          if(classClientIds.has(clientId)) throw new Error('Sono presenti identificativi client di classe duplicati.');
+          classClientIds.add(clientId);
         }
+        const studentIds = new Set();
+        const studentClientIds = new Set();
+        for(const st of c.students) validateStudent(st, studentIds, studentClientIds);
       }
+      validId(raw.activeClassId, 'Classe selezionata');
       if(raw.activeClassId != null && !raw.classes.some(c => String(c.id) === String(raw.activeClassId))) throw new Error('La classe selezionata nel backup non esiste.');
       return;
     }
     // Compatibilità con il formato precedente, che salvava una sola classe al livello principale.
-    if(!Array.isArray(raw.students) || !raw.students.every(st => st && typeof st.name === 'string' && st.name.trim())) throw new Error('Il file non contiene una struttura Hogwarts riconosciuta.');
-    for(const st of raw.students) {
-      if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casata non riconosciuta.');
-      if(st.points != null && (typeof st.points !== 'number' || !Number.isFinite(st.points))) throw new Error('È presente un punteggio non valido.');
-      if(st.history != null && !Array.isArray(st.history)) throw new Error('Lo storico di uno studente non è valido.');
-      for(const h of (st.history || [])) if(!h || typeof h !== 'object' || (h.points != null && (typeof h.points !== 'number' || !Number.isFinite(h.points)))) throw new Error('Una voce dello storico è incompleta o non valida.');
-    }
+    if(!Array.isArray(raw.students) || raw.students.length > MAX_STUDENTS_PER_CLASS) throw new Error('Il file non contiene una struttura Hogwarts riconosciuta.');
+    if(raw.className != null && (typeof raw.className !== 'string' || raw.className.length > MAX_CLASS_NAME_LENGTH)) throw new Error('Nome della classe non valido.');
+    if(raw.schoolYear != null && (typeof raw.schoolYear !== 'string' || raw.schoolYear.length > 40)) throw new Error('Anno scolastico non valido.');
+    const studentIds = new Set();
+    const studentClientIds = new Set();
+    for(const st of raw.students) validateStudent(st, studentIds, studentClientIds);
   }
   $('backupBtn').onclick = () => {
     try {
@@ -1978,6 +2230,7 @@ input, select, .authbox input {
     if(!file) return;
     try {
       if(file.size === 0) throw new Error('File vuoto.');
+      if(file.size > 10 * 1024 * 1024) throw new Error('Il backup supera il limite di 10 MB.');
       const data = JSON.parse(await file.text());
       let restored;
       if(data && data.format === 'hogwarts-torneo-backup') {
@@ -1993,7 +2246,10 @@ input, select, .authbox input {
       if(!candidate.classes || !candidate.classes.length) throw new Error('Il backup non contiene classi ripristinabili.');
       const classCount = candidate.classes.length;
       const studentCount = candidate.classes.reduce((n, c) => n + c.students.length, 0);
-      if(!confirm('Stai per ripristinare un backup con ' + classCount + ' class' + (classCount === 1 ? 'e' : 'i') + ' e ' + studentCount + ' student' + (studentCount === 1 ? 'e' : 'i') + '.\n\nI dati attualmente presenti in questo browser saranno sostituiti. Prima di procedere, assicurati di avere una copia di backup dei dati correnti. Vuoi continuare?')) return;
+      const cloudWarning = supabaseUser && role === 'teacher'
+        ? '\n\nSe sei autenticato, il ripristino verrà anche sincronizzato con Supabase e potrà sostituire le classi e i dati cloud del tuo account che non sono presenti nel backup.'
+        : '';
+      if(!confirm('Stai per ripristinare un backup con ' + classCount + ' class' + (classCount === 1 ? 'e' : 'i') + ' e ' + studentCount + ' student' + (studentCount === 1 ? 'e' : 'i') + '.\n\nI dati attualmente presenti in questo browser saranno sostituiti.' + cloudWarning + '\n\nPrima di procedere, assicurati di avere una copia di backup dei dati correnti. Vuoi continuare?')) return;
       const previousState = state;
       try {
         state = candidate;
@@ -2083,7 +2339,7 @@ input, select, .authbox input {
     if(role !== 'teacher' || teacherView !== 'class') return;
     const target = e.target;
     // I clic dentro le schede o sui pulsanti che le aprono non devono chiuderle.
-    if(target.closest('#classCard, #pointsCard, #manageBtn, #pointsBtn')) return;
+    if(target.closest('#classCard, #classList, #pointsCard, #manageBtn, #pointsBtn')) return;
     const classOpen = $('classCard').style.display !== 'none';
     const pointsOpen = $('pointsCard').style.display !== 'none';
     if(!classOpen && !pointsOpen) return;
@@ -2104,6 +2360,7 @@ input, select, .authbox input {
 
   save();
   setRole('student');
+  loadPublicData();
 })();
 </script>
 </body>
