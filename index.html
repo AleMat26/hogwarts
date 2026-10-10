@@ -770,7 +770,8 @@ input, select, .authbox input {
 .public-picker-heading h3:after { display:none; }
 .public-picker-heading p { margin:0; color:#d2ccbe; font:14px/1.5 system-ui,sans-serif; }
 .public-class-picker label { display:block; margin-bottom:7px; color:#e6dcc5; font:600 14px system-ui,sans-serif; }
-#publicClassSelect { width:100%; min-height:52px; padding:13px 16px; font-size:17px; font-weight:600; }
+#publicClassSelect { width:100%; min-height:52px; padding:13px 16px; font-size:17px; font-weight:400; }
+#publicClassSelect option { font-weight:400; }
 .public-class-caption { margin:10px 0 0; color:#c9c1af; font:13px/1.5 system-ui,sans-serif; }
 /* Menù a tendina più comodi da usare nella zona docente. */
 #classManager select, #classCard select, #pointsCard select, #teacherControls select {
@@ -1106,13 +1107,20 @@ input, select, .authbox input {
     const canDeleteClass = c.archived || c.resetForDeletion;
     const deleteLabel = c.archived ? '🗑️ Cancella archivio' : '🗑️ Elimina classe azzerata';
     const deleteTitle = c.archived ? 'Elimina definitivamente questa classe archiviata' : 'Elimina definitivamente questa classe dopo l’azzeramento';
-    $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${canDeleteClass ? ` <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="${deleteTitle}">${deleteLabel}</button>` : ''}<br><span style="font-size:13px">${state.students.length} studenti · ${state.students.filter(st => st.house).length} smistati</span>`;
+    if(role === 'teacher' && teacherView === 'castle') {
+      const activeCount = state.classes.filter(cl => !cl.archived).length;
+      $('activeClassSummary').innerHTML = `<strong>🏰 Castello</strong> <span class="class-status">Riepilogo cumulativo</span><br><span style="font-size:13px">${activeCount} classi attive</span>`;
+    } else {
+      $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${canDeleteClass ? ` <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="${deleteTitle}">${deleteLabel}</button>` : ''}<br><span style="font-size:13px">${c.students.length} studenti · ${c.students.filter(st => st.house).length} smistati</span>`;
+    }
     const finalYear = isFinalYearClass(c.name);
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
     $('promoteClassBtn').disabled = activeIsArchived();
     $('promoteClassBtn').title = activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
+    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera';
+    $('sortBtn').disabled = (role === 'teacher' && teacherView === 'castle') || activeIsArchived() || !state.students.length || state.students.every(st => st.house);
   }
 
   function render(){
@@ -1269,7 +1277,7 @@ input, select, .authbox input {
     }
     resetPointsSelection = false;
     const readOnly = activeIsArchived();
-    $('sortBtn').disabled = readOnly || !state.students.length || state.students.every(st => st.house);
+    $('sortBtn').disabled = (role === 'teacher' && teacherView === 'castle') || readOnly || !state.students.length || state.students.every(st => st.house);
     $('studentName').disabled = readOnly;
     $('addStudent').disabled = readOnly;
     $('pointsStudent').disabled = readOnly;
@@ -1277,7 +1285,7 @@ input, select, .authbox input {
     $('saveGrade').disabled = readOnly;
     $('commendBtn').disabled = readOnly;
     $('malusBtn').disabled = readOnly;
-    $('resetBtn').disabled = readOnly;
+    $('resetBtn').disabled = role === 'teacher' && teacherView === 'castle' ? !state.classes.length : readOnly;
     $('classList').querySelectorAll('button').forEach(button => button.disabled = readOnly);
     history();
   }
@@ -1296,8 +1304,17 @@ input, select, .authbox input {
 
   function setRole(r){
     role = r;
-    if(r !== 'teacher') selectedHouse = null;
-    if(r === 'teacher') teacherView = 'castle';
+    if(r !== 'teacher') { selectedHouse = null; publicClassId = ALL_ACTIVE_CLASSES; }
+    if(r === 'teacher') {
+      teacherView = 'castle';
+      selectedHouse = null;
+      $('houseSearch').value = '';
+      $('houseStudentsPanel').style.display = 'none';
+      $('classCard').style.display = 'none';
+      $('pointsCard').style.display = 'none';
+      $('manageBtn').classList.remove('primary');
+      $('pointsBtn').classList.remove('primary');
+    }
     resetPointsSelection = true;
     $('gradeInput').value = '';
     const isTeacher = r === 'teacher';
@@ -1718,13 +1735,32 @@ input, select, .authbox input {
   $('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('open'); };
 
   $('resetBtn').onclick = () => {
+    if(role === 'teacher' && teacherView === 'castle') {
+      if(!state.classes.length) { showToast('Non ci sono classi da azzerare.'); return; }
+      if(!confirm('Vuoi azzerare TUTTE le classi, comprese quelle in archivio?\n\nSaranno rimossi smistamenti, punti e storico di ogni studente. Gli studenti e le classi resteranno presenti, ma tutte le Casate ripartiranno da zero. Questa operazione non si può annullare: esporta prima un backup JSON.')) return;
+      state.classes.forEach(c => {
+        c.students.forEach(st => { st.house = null; st.points = 0; st.history = []; });
+        c.resetForDeletion = true;
+      });
+      const active = activeClass();
+      if(active) { state.className = active.name; state.schoolYear = active.schoolYear; state.students = active.students; state.nextId = active.nextId; }
+      selectedHouse = null;
+      $('houseStudentsPanel').style.display = 'none';
+      $('classCard').style.display = 'none';
+      $('pointsCard').style.display = 'none';
+      $('manageBtn').classList.remove('primary');
+      $('pointsBtn').classList.remove('primary');
+      teacherView = 'castle';
+      resetPointsSelection = true;
+      $('gradeInput').value = '';
+      save();
+      render();
+      showToast('Tutte le classi sono state azzerate. Il Castello riparte da zero.');
+      return;
+    }
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     if(confirm('Azzera smistamenti, voti e punteggi della sola classe ' + state.className + '?')){
-      state.students.forEach(s => {
-        s.house = null;
-        s.points = 0;
-        s.history = [];
-      });
+      state.students.forEach(s => { s.house = null; s.points = 0; s.history = []; });
       const resetClass = activeClass();
       if(resetClass) resetClass.resetForDeletion = true;
       save();
@@ -1946,7 +1982,17 @@ input, select, .authbox input {
         throw new Error('Il browser non è riuscito a salvare i dati ripristinati. I dati in memoria sono stati mantenuti.');
       }
       resetPointsSelection = true; $('gradeInput').value = '';
-      selectedHouse = null; render(); renderClassManager(); showToast('Backup ripristinato correttamente.');
+      selectedHouse = null;
+      teacherView = 'castle';
+      $('houseSearch').value = '';
+      $('houseStudentsPanel').style.display = 'none';
+      $('classCard').style.display = 'none';
+      $('pointsCard').style.display = 'none';
+      $('manageBtn').classList.remove('primary');
+      $('pointsBtn').classList.remove('primary');
+      $('castleViewBtn').style.display = 'none';
+      publicClassId = ALL_ACTIVE_CLASSES;
+      render(); renderClassManager(); showToast('Backup ripristinato correttamente. Visualizzazione Castello.');
     } catch(err) {
       console.error(err);
       alert('Ripristino annullato: ' + (err && err.message ? err.message : 'file JSON non valido') + '\n\nI dati esistenti non sono stati sostituiti.');
