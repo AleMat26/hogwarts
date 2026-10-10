@@ -1022,6 +1022,11 @@ input, select, .authbox input {
     }));
   }
   function normalizeState(raw){
+    // Un elenco classi esplicitamente vuoto è uno stato valido: non ricreare una classe fantasma al riavvio.
+    if(raw && Array.isArray(raw.classes) && raw.classes.length === 0){
+      return { classes: [], activeClassId: null, nextClassId: Number(raw.nextClassId) || 1,
+        className: 'Castello', schoolYear: raw.schoolYear || DEFAULT_YEAR, students: [], nextId: 1 };
+    }
     if(raw && Array.isArray(raw.classes) && raw.classes.length){
       const classes = raw.classes.filter(c => c && typeof c.name === 'string').map((c,i) => ({
         id: String(c.id || ('class-' + (i+1))), name: c.name,
@@ -1104,19 +1109,21 @@ input, select, .authbox input {
     select.innerHTML = castlePlaceholder + orderedClasses.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}${c.archived ? ' · Archivio' : ''}</option>`).join('');
     select.value = role === 'teacher' && teacherView === 'castle' ? '' : currentValue;
     const c = activeClass();
-    const canDeleteClass = c.archived || c.resetForDeletion;
-    const deleteLabel = c.archived ? '🗑️ Cancella archivio' : '🗑️ Elimina classe azzerata';
-    const deleteTitle = c.archived ? 'Elimina definitivamente questa classe archiviata' : 'Elimina definitivamente questa classe dopo l’azzeramento';
+    const canDeleteClass = Boolean(c && (c.archived || c.resetForDeletion));
+    const deleteLabel = c && c.archived ? '🗑️ Cancella archivio' : '🗑️ Elimina classe azzerata';
+    const deleteTitle = c && c.archived ? 'Elimina definitivamente questa classe archiviata' : 'Elimina definitivamente questa classe dopo l’azzeramento';
     if(role === 'teacher' && teacherView === 'castle') {
       const activeCount = state.classes.filter(cl => !cl.archived).length;
-      $('activeClassSummary').innerHTML = `<strong>🏰 Castello</strong> <span class="class-status">Riepilogo cumulativo</span><br><span style="font-size:13px">${activeCount} classi attive</span>`;
-    } else {
+      $('activeClassSummary').innerHTML = `<strong>🏰 Castello</strong> <span class="class-status">Riepilogo cumulativo</span><br><span style="font-size:13px">${activeCount} classi attive · ${state.classes.length} classi totali</span>`;
+    } else if(c) {
       $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${canDeleteClass ? ` <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="${deleteTitle}">${deleteLabel}</button>` : ''}<br><span style="font-size:13px">${c.students.length} studenti · ${c.students.filter(st => st.house).length} smistati</span>`;
+    } else {
+      $('activeClassSummary').innerHTML = '<strong>🏰 Castello</strong> <span class="class-status">Nessuna classe presente</span><br><span style="font-size:13px">Puoi creare una nuova classe oppure ripristinare un backup JSON.</span>';
     }
-    const finalYear = isFinalYearClass(c.name);
+    const finalYear = c ? isFinalYearClass(c.name) : false;
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
-    $('promoteClassBtn').disabled = activeIsArchived();
-    $('promoteClassBtn').title = activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
+    $('promoteClassBtn').disabled = !c || activeIsArchived() || (role === 'teacher' && teacherView === 'castle');
+    $('promoteClassBtn').title = !c ? 'Crea prima una classe.' : activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
     $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera';
@@ -1461,24 +1468,38 @@ input, select, .authbox input {
   function deleteArchivedClass(){
     const target = activeClass();
     if(!target || !(target.archived || target.resetForDeletion)){ showToast('Puoi eliminare soltanto una classe archiviata o una classe già azzerata.'); return; }
-    if(state.classes.length <= 1){
-      alert('Prima di eliminare l’unica classe rimasta, crea una nuova classe.');
-      return;
-    }
     const confirmation = 'Vuoi eliminare definitivamente ' + target.name + ' · ' + target.schoolYear + '?\n\nSaranno cancellati da questo browser la classe, gli studenti, le Casate, i punteggi e lo storico associato. L’operazione non si può annullare. Esporta prima un backup JSON se vuoi conservarne una copia.';
     if(!confirm(confirmation)) return;
     const deletedName = target.name + ' · ' + target.schoolYear;
     state.classes = state.classes.filter(c => c.id !== target.id);
-    let next = state.classes.find(c => !c.archived) || state.classes[0];
-    state.activeClassId = next.id;
-    state.className = next.name;
-    state.schoolYear = next.schoolYear;
-    state.students = next.students;
-    state.nextId = next.nextId;
     selectedHouse = null;
+    $('houseStudentsPanel').style.display = 'none';
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.remove('primary');
+    $('gradeInput').value = '';
+    resetPointsSelection = true;
+    if(state.classes.length){
+      const next = state.classes.find(c => !c.archived) || state.classes[0];
+      state.activeClassId = next.id;
+      state.className = next.name;
+      state.schoolYear = next.schoolYear;
+      state.students = next.students;
+      state.nextId = next.nextId;
+    } else {
+      // Nessuna classe rimasta: conserva lo stato vuoto e mostra il Castello senza punteggi o studenti.
+      state.activeClassId = null;
+      state.className = 'Castello';
+      state.schoolYear = DEFAULT_YEAR;
+      state.students = [];
+      state.nextId = 1;
+      teacherView = 'castle';
+      publicClassId = ALL_ACTIVE_CLASSES;
+    }
     save();
     render();
-    showToast('Classe eliminata: ' + deletedName + '.');
+    showToast(state.classes.length ? 'Classe eliminata: ' + deletedName + '.' : 'Ultima classe eliminata. Il Castello è vuoto.');
   }
 
   $('newClassBtn').onclick = () => {
