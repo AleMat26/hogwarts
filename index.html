@@ -319,12 +319,12 @@ main {
 .sorting-houses { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; text-align:left; }
 .sorting-house { min-width:0; padding:15px; border:1px solid currentColor; border-radius:14px; background:linear-gradient(150deg,rgba(255,255,255,.055),rgba(0,0,0,.16)); }
 .sorting-house.g { color:#d36b70; background-color:rgba(133,35,43,.16); }
-.sorting-house.t { color:#c5ad68; background:linear-gradient(145deg,rgba(145,112,29,.32),rgba(91,75,28,.27)); border-color:rgba(197,165,75,.48); }
-.sorting-house.t h3 { color:#ead79a; }
-.sorting-house.t .sorting-house-count { color:#d5bf7c; }
-.sorting-house.t .sorting-student-list { color:#eee5d0; }
-.sorting-house.t .sorting-student-list span { border-bottom-color:rgba(255,255,255,.08); }
-.sorting-house.t .sorting-student-list .newly-sorted { color:#f4d77f; }
+.sorting-house.t { color:#b7a16a; background:linear-gradient(145deg,rgba(105,91,49,.20),rgba(58,53,34,.18)); border-color:rgba(169,149,91,.40); }
+.sorting-house.t h3 { color:#d8c99d; }
+.sorting-house.t .sorting-house-count { color:#c2b17d; }
+.sorting-house.t .sorting-student-list { color:#e5dfd0; }
+.sorting-house.t .sorting-student-list span { border-bottom-color:rgba(255,255,255,.07); }
+.sorting-house.t .sorting-student-list .newly-sorted { color:#e5d19a; }
 .sorting-house.r { color:#83a9dc; background-color:rgba(40,82,139,.18); }
 .sorting-house.s { color:#7fbd8b; background-color:rgba(38,99,55,.18); }
 .sorting-house-head { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
@@ -979,17 +979,11 @@ input, select, .authbox input {
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
   const KEY = 'hogwartsState';
-  // Segna le modifiche docente non ancora confermate da Supabase: al refresh verranno ritentate.
-  const PENDING_SYNC_KEY = KEY + ':pendingSupabaseSync';
-  let localEditRevision = 0;
   // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
   const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
-  // Mantiene la sessione Supabase nel browser e rinnova automaticamente il token.
-  // Su un computer condiviso, usare sempre il pulsante di uscita dalla modalita docente.
-  const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
-    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
-  }) || null;
+  // La pagina torna sempre in modalita pubblica al ricaricamento: non conservare la sessione docente nel localStorage del browser condiviso.
+  const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
   let supabaseUser = null;
   let remoteSyncPromise = Promise.resolve();
   let publicScores = null;
@@ -1166,12 +1160,7 @@ input, select, .authbox input {
     const active = activeClass();
     if(active){ active.name = state.className || active.name; active.schoolYear = state.schoolYear || active.schoolYear; active.students = state.students; active.nextId = state.nextId; }
     localStorage.setItem(KEY, JSON.stringify(state));
-    if(supabaseUser && role === 'teacher') {
-      localEditRevision++;
-      // Imposta il contrassegno PRIMA di avviare la richiesta di rete: sopravvive a un refresh rapido.
-      try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch(e) { console.warn('Impossibile registrare la sincronizzazione in sospeso', e); }
-      queueRemoteSync();
-    }
+    if(supabaseUser && role === 'teacher') queueRemoteSync();
   }
   const score = v => Number((v - 6).toFixed(2));
   
@@ -1585,17 +1574,9 @@ input, select, .authbox input {
   }
   function queueRemoteSync(){
     if(!supabase || !supabaseUser) return;
-    const revisionAtQueue = localEditRevision;
-    remoteSyncPromise = remoteSyncPromise.then(async () => {
-      await syncTeacherData();
-      // Non cancellare il contrassegno se nel frattempo è stata fatta un'altra modifica.
-      if(revisionAtQueue === localEditRevision) {
-        try { localStorage.removeItem(PENDING_SYNC_KEY); } catch(e) { console.warn(e); }
-      }
-    }).catch(err => {
+    remoteSyncPromise = remoteSyncPromise.then(() => syncTeacherData()).catch(err => {
       console.error('Sincronizzazione Supabase non riuscita:', err);
-      // Il contrassegno resta presente: al prossimo refresh tenteremo di sincronizzare lo stato locale.
-      showToast('Modifiche conservate nel browser; sincronizzazione cloud da completare. Controlla la connessione prima di chiudere la pagina.');
+      showToast('Modifiche salvate nel browser, ma la sincronizzazione Supabase non è riuscita. Controlla la connessione.');
     });
   }
   async function syncTeacherData(){
@@ -2435,64 +2416,9 @@ input, select, .authbox input {
     document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
   });
 
-  async function initializeApp(){
-    setRole('student');
-    if(!supabase) { await loadPublicData(); return; }
-
-    // Prima verifichiamo la sessione. Un errore nel caricamento dei dati cloud
-    // non deve trasformare un docente autenticato in un visitatore pubblico.
-    let session = null;
-    try {
-      const { data, error } = await supabase.auth.getSession();
-      if(error) throw error;
-      session = data.session || null;
-    } catch(err) {
-      console.error('Impossibile verificare la sessione Supabase:', err);
-      await loadPublicData();
-      showToast('Non è stato possibile ripristinare la sessione. Se necessario, accedi di nuovo.');
-      return;
-    }
-
-    if(session && session.user) {
-      supabaseUser = session.user;
-      // Se un refresh ha interrotto una sincronizzazione, recupera lo snapshot locale e ritenta
-      // l'upload prima di ricaricare lo stato cloud, evitando di scartare l'ultima modifica.
-      let hasPendingSync = false;
-      try { hasPendingSync = localStorage.getItem(PENDING_SYNC_KEY) === '1'; } catch(e) { console.warn(e); }
-      if(hasPendingSync) {
-        try {
-          const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
-          if(raw) {
-            state = normalizeState(raw);
-            await syncTeacherData();
-            localStorage.removeItem(PENDING_SYNC_KEY);
-          }
-        } catch(syncErr) {
-          console.error('Recupero della sincronizzazione in sospeso non riuscito:', syncErr);
-          // Resta nell'area docente e conserva lo stato locale; non caricare dati cloud più vecchi.
-          setRole('teacher');
-          showToast('Area docente riaperta: una modifica è ancora in attesa di sincronizzazione.');
-          return;
-        }
-      }
-      try {
-        await loadTeacherData();
-        setRole('teacher');
-        showToast('Sessione docente ripristinata.');
-      } catch(loadErr) {
-        // La sessione è valida: mantieni la modalità docente anche se il cloud non risponde.
-        // Lo stato locale resta disponibile e non viene sostituito dalla schermata pubblica.
-        console.error('Sessione valida, ma caricamento dati docente non riuscito:', loadErr);
-        setRole('teacher');
-        showToast('Sessione docente ripristinata, ma i dati cloud non sono stati aggiornati. Controlla la connessione.');
-      }
-      return;
-    }
-
-    await loadPublicData();
-  }
-
-  initializeApp();
+  save();
+  setRole('student');
+  loadPublicData();
 })();
 </script>
 </body>
