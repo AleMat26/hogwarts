@@ -201,6 +201,14 @@ main {
 .class-manager-controls select { width:100%; }
 .class-manager-note { color:var(--muted); font:13px/1.5 system-ui,sans-serif; margin:10px 0 0; }
 .class-status { display:inline-block; margin-left:8px; padding:4px 8px; border:1px solid #6a5a3a; border-radius:999px; color:var(--gold); font:12px system-ui,sans-serif; }
+#castleStudentSearch { margin-top:22px; }
+.castle-student-search-results { display:grid; gap:8px; margin-top:12px; }
+.castle-student-result { display:grid; grid-template-columns:minmax(0,1fr) auto; align-items:center; gap:5px 14px; width:100%; padding:12px 14px; text-align:left; color:var(--paper); background:linear-gradient(145deg,rgba(35,42,57,.94),rgba(20,25,37,.96)); border:1px solid rgba(226,194,122,.28); border-radius:11px; cursor:pointer; font-family:system-ui,sans-serif; }
+.castle-student-result:hover,.castle-student-result:focus-visible { border-color:var(--gold); background:rgba(216,181,106,.10); outline:none; }
+.castle-student-result strong { color:var(--gold); font-size:15px; }
+.castle-student-result .student-result-meta { color:var(--muted); font-size:12px; }
+.castle-student-result .student-result-points { color:var(--gold); font-weight:700; white-space:nowrap; }
+.castle-student-search-empty { color:var(--muted); font:14px/1.5 system-ui,sans-serif; padding:8px 2px; }
 #castleClassScores { margin-top:22px; }
 .castle-class-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
 .castle-class-card { padding:13px 14px; border:1px solid rgba(226,194,122,.28); border-radius:13px; background:linear-gradient(145deg,rgba(35,42,57,.94),rgba(20,25,37,.96)); }
@@ -907,6 +915,15 @@ input, select, .authbox input {
     <div id="rankingList" class="list"></div>
   </section>
 
+  <!-- RICERCA STUDENTE, VISIBILE SOLO NEL CASTELLO DOCENTE -->
+  <section class="card" id="castleStudentSearch" style="display:none">
+    <h3>🔎 Cerca uno studente</h3>
+    <input id="castleStudentSearchInput" type="search" placeholder="Scrivi il nome o il cognome dello studente…" aria-label="Cerca uno studente in tutte le classi" autocomplete="off">
+    <div id="castleStudentSearchResults" class="castle-student-search-results" aria-live="polite">
+      <div class="castle-student-search-empty">Digita un nome per cercare uno studente in tutte le classi.</div>
+    </div>
+  </section>
+
   <!-- RIEPILOGO DELLE SINGOLE CLASSI, VISIBILE NELLA MODALITÀ CASTELLO DOCENTE -->
   <section class="card" id="castleClassScores" style="display:none">
     <h3>📚 Punteggi delle singole classi</h3>
@@ -1276,7 +1293,9 @@ input, select, .authbox input {
       return `<div class="ranking-row ${v === lead[1] && lead[1] > 0 ? 'leader' : ''} ${leaders.length > 1 && v === lead[1] ? 'tied-leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${formatPoints(v)} punti</b><span class="ranking-detail">${detail}</span></div>`;
     }).join('');
 
+    renderCastleStudentSearch();
     renderCastleClassScores();
+    $('castleStudentSearch').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' ? 'flex' : 'none';
     $('classCard').style.display = role === 'teacher' && teacherView === 'class' && $('manageBtn').classList.contains('primary') ? 'block' : 'none';
@@ -1301,6 +1320,38 @@ input, select, .authbox input {
   }
 
   const formatPoints = n => Number((Number(n) || 0).toFixed(2)).toLocaleString('it-IT', { maximumFractionDigits: 2 });
+
+  function renderCastleStudentSearch(){
+    const input = $('castleStudentSearchInput');
+    const results = $('castleStudentSearchResults');
+    if(!input || !results) return;
+    const query = input.value.trim().toLocaleLowerCase('it');
+    if(!query){
+      results.innerHTML = '<div class="castle-student-search-empty">Digita un nome per cercare uno studente in tutte le classi.</div>';
+      return;
+    }
+    const matches = [];
+    state.classes.forEach(c => {
+      (c.students || []).forEach(st => {
+        if((st.name || '').toLocaleLowerCase('it').includes(query)){
+          matches.push({ student: st, classId: c.id, className: c.name, schoolYear: c.schoolYear, archived: Boolean(c.archived) });
+        }
+      });
+    });
+    matches.sort((a,b) => a.student.name.localeCompare(b.student.name, 'it') || compareClasses({name:a.className,schoolYear:a.schoolYear},{name:b.className,schoolYear:b.schoolYear}));
+    if(!matches.length){
+      results.innerHTML = '<div class="castle-student-search-empty">Nessuno studente trovato. Controlla il nome o il cognome.</div>';
+      return;
+    }
+    results.innerHTML = matches.slice(0,50).map(item => {
+      const st = item.student;
+      const house = st.house && houses[st.house] ? houses[st.house] : 'Da smistare';
+      return `<button type="button" class="castle-student-result" data-student-class="${esc(item.classId)}" aria-label="Apri la classe ${esc(item.className)} per ${esc(st.name)}">
+        <span><strong>${esc(st.name)}</strong><br><span class="student-result-meta">${esc(house)} · ${esc(item.className)} · ${esc(item.schoolYear || '')}${item.archived ? ' · Archivio' : ''}</span></span>
+        <span class="student-result-points">${formatPoints(st.points || 0)} punti</span>
+      </button>`;
+    }).join('') + (matches.length > 50 ? '<div class="castle-student-search-empty">Sono mostrati i primi 50 risultati. Aggiungi altre lettere per restringere la ricerca.</div>' : '');
+  }
 
   function renderCastleClassScores(){
     const grid = $('castleClassGrid');
@@ -1412,6 +1463,7 @@ input, select, .authbox input {
     if(r === 'teacher') {
       teacherView = 'castle';
       selectedHouse = null;
+      $('castleStudentSearchInput').value = '';
       $('houseSearch').value = '';
       $('houseStudentsPanel').style.display = 'none';
       $('classCard').style.display = 'none';
@@ -1445,6 +1497,16 @@ input, select, .authbox input {
   }
 
   // Event Listeners
+  $('castleStudentSearchInput').addEventListener('input', renderCastleStudentSearch);
+  $('castleStudentSearchResults').addEventListener('click', e => {
+    const result = e.target.closest('[data-student-class]');
+    if(!result) return;
+    const classId = result.dataset.studentClass;
+    $('castleStudentSearchInput').value = '';
+    renderCastleStudentSearch();
+    switchClass(classId);
+  });
+
   // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
   document.querySelectorAll('.house').forEach(card => {
     const openHouse = () => {
