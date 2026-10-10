@@ -2439,42 +2439,56 @@ input, select, .authbox input {
     setRole('student');
     if(!supabase) { await loadPublicData(); return; }
 
-    // Controlla prima la sessione: non caricare prima i dati pubblici, perché sostituiscono lo stato in memoria.
+    // Prima verifichiamo la sessione. Un errore nel caricamento dei dati cloud
+    // non deve trasformare un docente autenticato in un visitatore pubblico.
+    let session = null;
     try {
       const { data, error } = await supabase.auth.getSession();
       if(error) throw error;
-      if(data.session && data.session.user) {
-        supabaseUser = data.session.user;
-        // Se un refresh ha interrotto una sincronizzazione, recupera lo snapshot locale e ritenta
-        // l'upload prima di ricaricare lo stato cloud, evitando di scartare l'ultima modifica.
-        let hasPendingSync = false;
-        try { hasPendingSync = localStorage.getItem(PENDING_SYNC_KEY) === '1'; } catch(e) { console.warn(e); }
-        if(hasPendingSync) {
-          try {
-            const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
-            if(raw) {
-              state = normalizeState(raw);
-              await syncTeacherData();
-              localStorage.removeItem(PENDING_SYNC_KEY);
-            }
-          } catch(syncErr) {
-            console.error('Recupero della sincronizzazione in sospeso non riuscito:', syncErr);
-            // Non caricare dati cloud potenzialmente più vecchi sopra lo snapshot locale pendente.
-            setRole('teacher');
-            showToast('Sessione ripristinata, ma una modifica attende la sincronizzazione. Controlla la connessione e riprova.');
-            return;
+      session = data.session || null;
+    } catch(err) {
+      console.error('Impossibile verificare la sessione Supabase:', err);
+      await loadPublicData();
+      showToast('Non è stato possibile ripristinare la sessione. Se necessario, accedi di nuovo.');
+      return;
+    }
+
+    if(session && session.user) {
+      supabaseUser = session.user;
+      // Se un refresh ha interrotto una sincronizzazione, recupera lo snapshot locale e ritenta
+      // l'upload prima di ricaricare lo stato cloud, evitando di scartare l'ultima modifica.
+      let hasPendingSync = false;
+      try { hasPendingSync = localStorage.getItem(PENDING_SYNC_KEY) === '1'; } catch(e) { console.warn(e); }
+      if(hasPendingSync) {
+        try {
+          const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+          if(raw) {
+            state = normalizeState(raw);
+            await syncTeacherData();
+            localStorage.removeItem(PENDING_SYNC_KEY);
           }
+        } catch(syncErr) {
+          console.error('Recupero della sincronizzazione in sospeso non riuscito:', syncErr);
+          // Resta nell'area docente e conserva lo stato locale; non caricare dati cloud più vecchi.
+          setRole('teacher');
+          showToast('Area docente riaperta: una modifica è ancora in attesa di sincronizzazione.');
+          return;
         }
+      }
+      try {
         await loadTeacherData();
         setRole('teacher');
         showToast('Sessione docente ripristinata.');
-        return;
+      } catch(loadErr) {
+        // La sessione è valida: mantieni la modalità docente anche se il cloud non risponde.
+        // Lo stato locale resta disponibile e non viene sostituito dalla schermata pubblica.
+        console.error('Sessione valida, ma caricamento dati docente non riuscito:', loadErr);
+        setRole('teacher');
+        showToast('Sessione docente ripristinata, ma i dati cloud non sono stati aggiornati. Controlla la connessione.');
       }
-    } catch(err) {
-      console.error('Impossibile ripristinare la sessione docente:', err);
-      supabaseUser = null;
-      showToast('Non è stato possibile ripristinare la sessione. Puoi effettuare nuovamente l’accesso.');
+      return;
     }
+
     await loadPublicData();
   }
 
