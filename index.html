@@ -1647,7 +1647,7 @@ input, select, .authbox input {
           // e la conclusione della sincronizzazione.
           if(remoteSyncRequested) queueRemoteSync();
         }
-      }, 120);
+      }, 35);
     });
   }
   async function syncTeacherData(){
@@ -1673,7 +1673,7 @@ input, select, .authbox input {
       if(existingStudentsError) throw existingStudentsError;
       const remoteStudentByClient = new Map((existingStudents || []).map(st => [st.client_id, st.id]));
       const retainedStudentIds = new Set();
-      for(const st of c.students){
+      const syncOneStudent = async st => {
         const studentClientId = st.clientId || String(st.id);
         const studentPayload = { class_id: c.dbId, client_id: studentClientId, name: st.name, house_id: st.house || null, points: Number(st.points) || 0 };
         const existingStudentId = remoteStudentByClient.get(studentClientId);
@@ -1684,21 +1684,29 @@ input, select, .authbox input {
         st.dbId = sr.data.id; retainedStudentIds.add(String(sr.data.id));
         const { data: existingGrades, error: gradesError } = await supabase.from('grades').select('id,history_id').eq('student_id', st.dbId);
         if(gradesError) throw gradesError;
+        const existingGradeByHistory = new Map((existingGrades || []).map(g => [String(g.history_id), g]));
         const retainedHistoryIds = new Set();
-        for(const h of (st.history || [])){
+        // Le operazioni sui voti dello stesso studente non dipendono l'una dall'altra:
+        // eseguirle in parallelo riduce molto il tempo totale di uscita.
+        await Promise.all((st.history || []).map(async h => {
           const hid = String(h.id);
           const entryType = h.grade === 'Encomio speciale' ? 'encomio' : h.grade === 'Malus' ? 'malus' : 'voto';
           const numericGrade = entryType === 'voto' && Number.isFinite(Number(h.grade)) ? Number(h.grade) : null;
           const gradePayload = { student_id: st.dbId, history_id: hid, grade: numericGrade, points: Number(h.points) || 0, entry_type: entryType };
-          const found = (existingGrades || []).find(g => String(g.history_id) === hid);
+          const found = existingGradeByHistory.get(hid);
           const gr = found
             ? await supabase.from('grades').update(gradePayload).eq('id', found.id).select('id').single()
             : await supabase.from('grades').insert(gradePayload).select('id').single();
           if(gr.error) throw gr.error;
           retainedHistoryIds.add(String(gr.data.id));
-        }
+        }));
         const staleGrades = (existingGrades || []).filter(g => !retainedHistoryIds.has(String(g.id))).map(g => g.id);
         if(staleGrades.length){ const { error } = await supabase.from('grades').delete().in('id', staleGrades); if(error) throw error; }
+      };
+      // Limita a 5 studenti contemporanei per velocizzare senza sommergere Supabase
+      // di centinaia di richieste simultanee nelle classi con molti voti.
+      for(let i = 0; i < c.students.length; i += 5){
+        await Promise.all(c.students.slice(i, i + 5).map(syncOneStudent));
       }
       const staleStudents = (existingStudents || []).filter(st => !retainedStudentIds.has(String(st.id))).map(st => st.id);
       if(staleStudents.length){ const { error } = await supabase.from('students').delete().in('id', staleStudents); if(error) throw error; }
