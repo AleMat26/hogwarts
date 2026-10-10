@@ -303,6 +303,8 @@ main {
 .dialog {
   max-width: 560px;
   width: 100%;
+  max-height: min(88vh, 900px);
+  overflow-y: auto;
   background: #171923;
   border: 1px solid var(--gold);
   border-radius: 20px;
@@ -310,6 +312,26 @@ main {
   box-shadow: 0 20px 70px #000;
 }
 .dialog h2 { margin-top: 0; }
+.sorting-ceremony { text-align:center; }
+.sorting-ceremony .ceremony-intro { color:#d9d1bf; line-height:1.55; margin:8px 0 20px; }
+.sorting-houses { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; text-align:left; }
+.sorting-house { min-width:0; padding:15px; border:1px solid currentColor; border-radius:14px; background:linear-gradient(150deg,rgba(255,255,255,.055),rgba(0,0,0,.16)); }
+.sorting-house.g { color:#d36b70; background-color:rgba(133,35,43,.16); }
+.sorting-house.t { color:#d9b958; background-color:rgba(137,104,27,.15); }
+.sorting-house.r { color:#83a9dc; background-color:rgba(40,82,139,.18); }
+.sorting-house.s { color:#7fbd8b; background-color:rgba(38,99,55,.18); }
+.sorting-house-head { display:flex; align-items:center; gap:9px; margin-bottom:10px; }
+.sorting-house-crest { font-size:27px; line-height:1; }
+.sorting-house h3 { color:#f5ecd9; font-size:17px; margin:0; }
+.sorting-house-count { color:#d7c9a4; font-size:12px; margin-left:auto; white-space:nowrap; }
+.sorting-student-list { color:#f1eadb; font:14px/1.55 system-ui,sans-serif; overflow-wrap:anywhere; }
+.sorting-student-list span { display:block; padding:3px 0; border-bottom:1px solid rgba(255,255,255,.07); }
+.sorting-student-list span:last-child { border-bottom:0; }
+.sorting-student-list .newly-sorted { color:#ffe39b; font-weight:800; }
+.sorting-single-house { max-width:390px; margin:0 auto; }
+.sorting-welcome { color:var(--gold-soft); font-size:19px; font-weight:800; margin:15px 0; }
+.sorting-enter { margin-top:22px; width:100%; min-height:48px; }
+@media(max-width:520px) { .sorting-houses { grid-template-columns:1fr; } .dialog { padding:20px; } }
 .close {
   float: right;
   background: none;
@@ -936,9 +958,10 @@ input, select, .authbox input {
 <!-- MODALE CAPPELLO PARLANTE -->
 <div class="modal" id="modal">
   <div class="dialog">
-    <button type="button" class="close" id="close">×</button>
+    <button type="button" class="close" id="close" aria-label="Chiudi la cerimonia">×</button>
     <h2>Il Cappello Parlante</h2>
     <div id="result" style="margin-top:15px;font-family:system-ui,sans-serif"></div>
+    <button type="button" class="btn primary sorting-enter" id="enterHogwarts">✨ Entra a Hogwarts</button>
   </div>
 </div>
 </div>
@@ -1606,6 +1629,16 @@ input, select, .authbox input {
     if(staleClasses.length){ const { error } = await supabase.from('classes').delete().in('id', staleClasses); if(error) throw error; }
   }
 
+  // Genera identificativi locali realmente univoci anche se alcune classi sono state eliminate.
+  // Il numero delle classi non basta a scegliere il prossimo ID: potrebbero esserci buchi nella sequenza.
+  function nextUniqueClassId(){
+    let id;
+    do {
+      id = 'class-' + state.nextClassId++;
+    } while(state.classes.some(c => String(c.id) === id || String(c.clientId || '') === id));
+    return id;
+  }
+
   function switchClass(classId){
     const target = state.classes.find(c => c.id === String(classId));
     if(!target) return;
@@ -1683,7 +1716,7 @@ input, select, .authbox input {
     if(state.classes.some(c => c.name.toLocaleLowerCase('it') === cleanName.toLocaleLowerCase('it') && c.schoolYear === cleanYear)){
       alert('Esiste già una classe con questo nome nello stesso anno scolastico.'); return;
     }
-    const id = 'class-' + state.nextClassId++;
+    const id = nextUniqueClassId();
     state.classes.push({ id, clientId: id, name: cleanName, schoolYear: cleanYear, students: [], nextId: 1, archived: false, resetForDeletion: false });
     switchClass(id);
   };
@@ -1730,7 +1763,7 @@ input, select, .authbox input {
     const promotedStudents = current.students.map((st, index) => ({
       id: index + 1, clientId: String(index + 1), name: st.name, house: st.house, points: 0, history: []
     }));
-    const id = 'class-' + state.nextClassId++;
+    const id = nextUniqueClassId();
     state.classes.push({ id, clientId: id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false, resetForDeletion: false });
     switchClass(id);
     showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.');
@@ -1911,16 +1944,20 @@ input, select, .authbox input {
 
   $('sortBtn').onclick = () => {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
-    let u = state.students.filter(s => !s.house);
+    const u = state.students.filter(s => !s.house);
     if(!u.length){
-      $('result').textContent = 'Tutti gli studenti sono già stati assegnati a una Casata.';
+      $('result').innerHTML = '<div class="sorting-ceremony"><p class="ceremony-intro">Tutti gli studenti sono già stati assegnati a una Casata. Il Cappello Parlante non deve effettuare altri smistamenti.</p></div>';
       $('modal').classList.add('open');
       return;
     }
+
+    // Memorizziamo il contesto prima di assegnare le Casate: nessuno studente già smistato viene spostato.
+    const previouslyAssigned = state.students.filter(s => !!s.house).length;
+    const isSingleNewStudent = u.length === 1 && previouslyAssigned > 0;
+    const newStudent = isSingleNewStudent ? u[0] : null;
     markClassChanged();
     const k = Object.keys(houses);
     const a = [...u].sort(() => Math.random() - .5);
-    // Conteggio iniziale: gli studenti già smistati non vengono mai spostati.
     const counts = Object.fromEntries(k.map(h => [h, state.students.filter(s => s.house === h).length]));
     a.forEach(student => {
       const minimum = Math.min(...k.map(h => counts[h]));
@@ -1929,17 +1966,31 @@ input, select, .authbox input {
       student.house = chosen;
       counts[chosen]++;
     });
-    const o = [...k].sort((x, y) => counts[y] - counts[x]);
 
     save();
     render();
     showToast('Smistamento completato!');
-    $('result').innerHTML = '<strong>🎩 Smistamento completato!</strong><br><br>' +
-      o.map(h => houses[h] + ': ' + state.students.filter(s => s.house === h).length + ' studenti').join('<br>');
+
+    const crests = { g:'🦁', t:'🦡', r:'🦅', s:'🐍' };
+    const houseCards = houseKey => {
+      const members = state.students.filter(student => student.house === houseKey);
+      const names = members.map(student => {
+        const isNew = newStudent && String(student.id) === String(newStudent.id);
+        return `<span class="${isNew ? 'newly-sorted' : ''}">${isNew ? '✨ ' : ''}${esc(student.name)}</span>`;
+      }).join('');
+      return `<article class="sorting-house ${houseKey}"><div class="sorting-house-head"><span class="sorting-house-crest" aria-hidden="true">${crests[houseKey]}</span><h3>${houses[houseKey]}</h3><span class="sorting-house-count">${members.length} ${members.length === 1 ? 'studente' : 'studenti'}</span></div><div class="sorting-student-list">${names || '<span>Nessuno studente</span>'}</div></article>`;
+    };
+
+    if(isSingleNewStudent){
+      $('result').innerHTML = `<div class="sorting-ceremony"><p class="ceremony-intro">Il Cappello Parlante ha fatto la sua scelta…</p><div class="sorting-single-house">${houseCards(newStudent.house)}</div><p class="sorting-welcome">Benvenuto/a, ${esc(newStudent.name)}!</p><p class="ceremony-intro">La tua nuova casa ti aspetta.</p></div>`;
+    } else {
+      $('result').innerHTML = `<div class="sorting-ceremony"><p class="ceremony-intro">La cerimonia dello smistamento è compiuta. Ecco le quattro Casate e gli studenti che ne fanno parte.</p><div class="sorting-houses">${k.map(houseCards).join('')}</div></div>`;
+    }
     $('modal').classList.add('open');
   };
 
   $('close').onclick = () => $('modal').classList.remove('open');
+  $('enterHogwarts').onclick = () => $('modal').classList.remove('open');
   $('modal').onclick = e => { if(e.target === $('modal')) $('modal').classList.remove('open'); };
 
   $('resetBtn').onclick = () => {
