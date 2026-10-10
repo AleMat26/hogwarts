@@ -1055,11 +1055,25 @@ input, select, .authbox input {
     return match ? (Number(match[1]) + 1) + '–' + (Number(match[2]) + 1) : DEFAULT_YEAR;
   }
   function normalizeStudents(list){
+    // Conserva gli identificativi cloud: perderli durante la normalizzazione
+    // faceva apparire nuovi gli studenti già presenti e poteva causare conflitti
+    // con client_id riutilizzati in classi diverse.
     return (Array.isArray(list) ? list : []).filter(st => st && typeof st.name === 'string').map(st => ({
-      id: st.id ?? Date.now() + Math.random(), name: st.name,
+      id: st.id ?? Date.now() + Math.random(),
+      dbId: st.dbId || null,
+      clientId: st.clientId || String(st.id ?? ''),
+      name: st.name,
       house: ['g','t','r','s'].includes(st.house) ? st.house : null,
-      points: Number(st.points) || 0, history: Array.isArray(st.history) ? st.history : []
+      points: Number(st.points) || 0,
+      history: Array.isArray(st.history) ? st.history : []
     }));
+  }
+  function makeStudentClientId(){
+    // Gli ID numerici degli studenti ripartono da 1 in ogni classe: non sono
+    // quindi adatti come identificativi globali in Supabase.
+    return 'student-' + (typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : Date.now().toString(36) + '-' + Math.random().toString(36).slice(2));
   }
   function normalizeState(raw){
     // Un elenco classi esplicitamente vuoto è uno stato valido: non ricreare una classe fantasma al riavvio.
@@ -1221,7 +1235,7 @@ input, select, .authbox input {
       ? publicAggregateStudents()
       : showingAggregate
         ? state.classes.filter(c => !c.archived).flatMap(c => c.students)
-        : (teacherClass ? teacherClass.students : []);
+        : (teacherClass ? teacherClass.students : state.students);
     const t = totals(displayedStudents);
     Object.keys(t).forEach(k => {
       const el = document.querySelector(`[data-house="${k}"]`);
@@ -1869,7 +1883,7 @@ input, select, .authbox input {
     let n = $('studentName').value.trim();
     if(!n) return;
     markClassChanged();
-    state.students.push({ id: state.nextId++, name: n, house: null, points: 0, history: [] });
+    state.students.push({ id: state.nextId++, clientId: makeStudentClientId(), dbId: null, name: n, house: null, points: 0, history: [] });
     $('studentName').value = '';
     save();
     render();
