@@ -626,7 +626,7 @@ header .title::after {
 }
 .house.leading .points { background: rgba(226,194,122,.14); border-color: var(--gold-soft); color: var(--gold-soft); }
 .house.leading .points::before { content: '🏆 '; }
-/* Pannello docente: due gruppi riconoscibili, mantenendo le due righe di pulsanti */
+/* Strumenti docente in alto; gestione operativa più in basso, dopo la Coppa. */
 .controls-row::before {
   flex: 0 0 100%;
   text-align: left;
@@ -636,10 +636,14 @@ header .title::after {
   letter-spacing: .17em;
   text-transform: uppercase;
 }
-.controls-row:first-child::before { content: 'Gestione didattica'; }
-.controls-row:nth-child(2)::before { content: 'Dati e archivio'; }
-#teacherControls { padding: 15px; border: 1px solid rgba(226,194,122,.22); border-radius: 18px; background: rgba(11,13,20,.58); }
+#teacherControls .controls-row:first-child::before { content: 'Strumenti docente'; }
+#teacherControls .controls-row:nth-child(2)::before { content: 'Dati e archivio'; }
+#teacherControls, #teacherWorkControls { padding: 15px; border: 1px solid rgba(226,194,122,.22); border-radius: 18px; background: rgba(11,13,20,.58); }
 #teacherControls .controls-row + .controls-row { padding-top: 10px; border-top: 1px solid rgba(226,194,122,.13); }
+#teacherWorkControls { margin-top: 22px; }
+#teacherWorkControls .controls-row::before { content: 'Gestione operativa'; }
+#accessSection { padding: 12px 20px; margin-bottom: 42px; }
+#accessSection .controls .btn { padding-top: 10px; padding-bottom: 10px; }
 /* Coppa delle Case: il distacco è leggibile e la parità viene evidenziata correttamente */
 #ranking { position: relative; overflow: hidden; }
 #ranking::before {
@@ -677,8 +681,9 @@ header .title::after {
 }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
 @media (max-width: 700px) {
-  #teacherControls { padding: 12px; }
+  #teacherControls, #teacherWorkControls { padding: 12px; }
   .controls-row::before { text-align: center; }
+  #accessSection { margin-bottom: 38px; }
   .controls-row .btn { min-width: min(100%, 145px); }
   #ranking::before { right: 18px; top: 17px; }
 }
@@ -700,7 +705,7 @@ body {
   background: linear-gradient(145deg, rgba(35,42,57,.94), rgba(27,33,47,.96));
   border-color: rgba(216,181,106,.28);
 }
-#teacherControls { background: rgba(29,36,51,.76); }
+#teacherControls, #teacherWorkControls { background: rgba(29,36,51,.76); }
 .house {
   background: linear-gradient(155deg, var(--house-tint, rgba(45,53,70,.98)), rgba(25,31,45,.98) 76%);
 }
@@ -797,23 +802,6 @@ input, select, .authbox input {
     </div>
   </section>
 
-  <!-- CONTROLLI DOCENTE -->
-  <div class="controls teacher-controls" id="teacherControls" style="display:none">
-    <div class="controls-row">
-      <button type="button" class="btn primary" id="sortBtn">🎩 Cappello Parlante</button>
-      <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
-      <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
-      <button type="button" class="btn" id="logoutBtn">🚪 Esci</button>
-    </div>
-    <div class="controls-row">
-      <button type="button" class="btn" id="resetBtn">↺ Azzera</button>
-      <button type="button" class="btn" id="exportBtn">⇩ Esporta Excel (.xlsx)</button>
-      <button type="button" class="btn" id="backupBtn">🛡️ Backup JSON</button>
-      <button type="button" class="btn" id="restoreBtn">↥ Ripristina backup</button>
-      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
-    </div>
-  </div>
-
   <!-- GESTIONE CLASSI E ANNI SCOLASTICI (DOCENTE) -->
   <section class="card" id="classManager" style="display:none">
     <h3>🏫 Classi e anni scolastici</h3>
@@ -827,6 +815,21 @@ input, select, .authbox input {
     </div>
     <p class="class-manager-note">Ogni classe ha studenti, Casate, punteggi e storico indipendenti. Promuovendo una classe, gli studenti conservano la Casata; la nuova Coppa riparte da zero e la classe precedente resta consultabile in archivio.</p>
   </section>
+
+  <!-- STRUMENTI DOCENTE: restano nella parte alta della pagina -->
+  <div class="controls teacher-controls" id="teacherControls" style="display:none">
+    <div class="controls-row">
+      <button type="button" class="btn primary" id="sortBtn">🎩 Cappello Parlante</button>
+      <button type="button" class="btn" id="logoutBtn">🚪 Esci</button>
+    </div>
+    <div class="controls-row">
+      <button type="button" class="btn" id="resetBtn">↺ Azzera</button>
+      <button type="button" class="btn" id="exportBtn">⇩ Esporta Excel (.xlsx)</button>
+      <button type="button" class="btn" id="backupBtn">🛡️ Backup JSON</button>
+      <button type="button" class="btn" id="restoreBtn">↥ Ripristina backup</button>
+      <input type="file" id="restoreFile" accept=".json,application/json" hidden>
+    </div>
+  </div>
 
   <!-- Le Casate e la Coppa sono già visibili: non serve un menu duplicato. -->
 
@@ -851,6 +854,14 @@ input, select, .authbox input {
     <p id="rankingLead" style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La Coppa si accende quando le Casate iniziano a conquistare punti.</p>
     <div id="rankingList" class="list"></div>
   </section>
+
+  <!-- GESTIONE OPERATIVA: sotto le Casate e la Coppa delle Case -->
+  <div class="controls teacher-controls" id="teacherWorkControls" style="display:none">
+    <div class="controls-row">
+      <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
+      <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
+    </div>
+  </div>
 
   <!-- GESTIONE CLASSE (DOCENTE) -->
   <section class="card" id="classCard" style="display:none">
@@ -1192,12 +1203,15 @@ input, select, .authbox input {
     if(r !== 'teacher') selectedHouse = null;
     const isTeacher = r === 'teacher';
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
+    $('teacherWorkControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherMode').style.display = isTeacher ? 'none' : 'inline-block';
     $('accessSection').style.display = isTeacher ? 'none' : 'block';
     $('classManager').style.display = isTeacher ? 'block' : 'none';
     $('publicClassPicker').style.display = isTeacher ? 'none' : 'block';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.remove('primary');
     $('authBox').style.display = 'none';
     $('email').value = '';
     $('password').value = '';
@@ -1215,7 +1229,6 @@ input, select, .authbox input {
       const key = card.dataset.houseCard;
       selectedHouse = selectedHouse === key ? null : key;
       render();
-      if(selectedHouse) $('houseStudentsPanel').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     };
     card.addEventListener('click', openHouse);
     card.addEventListener('keydown', e => {
@@ -1308,6 +1321,8 @@ input, select, .authbox input {
     $('gradeInput').value = '';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.remove('primary');
     save();
     render();
     showToast(target.archived ? 'Archivio aperto in sola consultazione.' : 'Classe attiva: ' + target.name + '.');
@@ -1402,17 +1417,21 @@ input, select, .authbox input {
     showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.');
   };
 
+  // Le schede operative si aprono sotto ai pulsanti senza spostare la pagina.
+  // La scheda selezionata resta aperta anche se si riclicca sul suo pulsante.
   $('manageBtn').onclick = () => {
-    $('classCard').style.display = $('classCard').style.display === 'block' ? 'none' : 'block';
-    if($('classCard').style.display === 'block') $('classCard').scrollIntoView({ behavior: 'smooth' });
+    $('classCard').style.display = 'block';
+    $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.add('primary');
+    $('pointsBtn').classList.remove('primary');
   };
 
   $('pointsBtn').onclick = () => {
-    $('pointsCard').style.display = $('pointsCard').style.display === 'block' ? 'none' : 'block';
-    if($('pointsCard').style.display === 'block'){
-      $('pointsCard').scrollIntoView({ behavior: 'smooth' });
-      history();
-    }
+    $('pointsCard').style.display = 'block';
+    $('classCard').style.display = 'none';
+    $('pointsBtn').classList.add('primary');
+    $('manageBtn').classList.remove('primary');
+    history();
   };
 
   const addStudentAction = () => {
