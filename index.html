@@ -986,6 +986,9 @@ input, select, .authbox input {
   const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
   let supabaseUser = null;
   let remoteSyncPromise = Promise.resolve();
+  let remoteSyncRequested = false;
+  let remoteSyncRunning = false;
+  let remoteSyncTimer = null;
   let lastRemoteSyncError = null;
   let publicScores = null;
   const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
@@ -1615,13 +1618,36 @@ input, select, .authbox input {
   }
   function queueRemoteSync(){
     if(!supabase || !supabaseUser) return;
-    remoteSyncPromise = remoteSyncPromise.then(() => {
-      lastRemoteSyncError = null;
-      return syncTeacherData();
-    }).catch(err => {
-      lastRemoteSyncError = err;
-      console.error('Sincronizzazione Supabase non riuscita:', err);
-      showToast('Modifiche salvate nel browser, ma la sincronizzazione Supabase non è riuscita. Controlla la connessione.');
+    // Accorpa i salvataggi ravvicinati: prima ogni chiamata a save() accodava
+    // una sincronizzazione completa, anche quando ne erano già in attesa molte.
+    // Ora viene eseguita una sincronizzazione dopo una breve pausa; se nel frattempo
+    // arrivano altre modifiche, al massimo viene eseguito un ulteriore passaggio.
+    remoteSyncRequested = true;
+    if(remoteSyncRunning || remoteSyncTimer) return;
+    remoteSyncPromise = new Promise(resolve => {
+      remoteSyncTimer = setTimeout(async () => {
+        remoteSyncTimer = null;
+        remoteSyncRunning = true;
+        try {
+          while(remoteSyncRequested){
+            remoteSyncRequested = false;
+            try {
+              lastRemoteSyncError = null;
+              await syncTeacherData();
+            } catch(err) {
+              lastRemoteSyncError = err;
+              console.error('Sincronizzazione Supabase non riuscita:', err);
+              showToast('Modifiche salvate nel browser, ma la sincronizzazione Supabase non è riuscita. Controlla la connessione.');
+            }
+          }
+        } finally {
+          remoteSyncRunning = false;
+          resolve();
+          // Gestisce una modifica arrivata nell'intervallo tra l'ultimo controllo
+          // e la conclusione della sincronizzazione.
+          if(remoteSyncRequested) queueRemoteSync();
+        }
+      }, 120);
     });
   }
   async function syncTeacherData(){
