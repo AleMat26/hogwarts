@@ -1026,7 +1026,7 @@ input, select, .authbox input {
         id: String(c.id || ('class-' + (i+1))), name: c.name,
         schoolYear: c.schoolYear || DEFAULT_YEAR, students: normalizeStudents(c.students),
         nextId: Number(c.nextId) || Math.max(0, ...normalizeStudents(c.students).map(st => Number(st.id) || 0)) + 1,
-        archived: Boolean(c.archived)
+        archived: Boolean(c.archived), resetForDeletion: Boolean(c.resetForDeletion)
       }));
       if(!classes.length) return normalizeState({ students: [], nextId: 1 });
       const active = classes.find(c => c.id === String(raw.activeClassId)) || classes.find(c => !c.archived) || classes[0];
@@ -1036,7 +1036,7 @@ input, select, .authbox input {
     // Migrazione automatica del vecchio formato: conserva tutti gli studenti, le Casate e i punti esistenti.
     const students = normalizeStudents(raw && raw.students);
     const nextId = Number(raw && raw.nextId) || Math.max(0, ...students.map(st => Number(st.id) || 0)) + 1;
-    const legacyClass = { id: 'class-1', name: (raw && raw.className) || 'II H', schoolYear: (raw && raw.schoolYear) || DEFAULT_YEAR, students, nextId, archived: false };
+    const legacyClass = { id: 'class-1', name: (raw && raw.className) || 'II H', schoolYear: (raw && raw.schoolYear) || DEFAULT_YEAR, students, nextId, archived: false, resetForDeletion: false };
     return { classes: [legacyClass], activeClassId: legacyClass.id, nextClassId: 2,
       className: legacyClass.name, schoolYear: legacyClass.schoolYear, students: legacyClass.students, nextId: legacyClass.nextId };
   }
@@ -1074,6 +1074,7 @@ input, select, .authbox input {
   }
   function activeClass(){ return state.classes.find(c => c.id === state.activeClassId) || state.classes[0]; }
   function activeIsArchived(){ const c = activeClass(); return Boolean(c && c.archived); }
+  function markClassChanged(){ const c = activeClass(); if(c && !c.archived) c.resetForDeletion = false; }
   function save(){
     const active = activeClass();
     if(active){ active.name = state.className || active.name; active.schoolYear = state.schoolYear || active.schoolYear; active.students = state.students; active.nextId = state.nextId; }
@@ -1102,7 +1103,10 @@ input, select, .authbox input {
     select.innerHTML = castlePlaceholder + orderedClasses.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}${c.archived ? ' · Archivio' : ''}</option>`).join('');
     select.value = role === 'teacher' && teacherView === 'castle' ? '' : currentValue;
     const c = activeClass();
-    $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${c.archived ? ' <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="Elimina definitivamente questa classe archiviata">🗑️ Cancella archivio</button>' : ''}<br><span style="font-size:13px">${state.students.length} studenti · ${state.students.filter(st => st.house).length} smistati</span>`;
+    const canDeleteClass = c.archived || c.resetForDeletion;
+    const deleteLabel = c.archived ? '🗑️ Cancella archivio' : '🗑️ Elimina classe azzerata';
+    const deleteTitle = c.archived ? 'Elimina definitivamente questa classe archiviata' : 'Elimina definitivamente questa classe dopo l’azzeramento';
+    $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${canDeleteClass ? ` <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="${deleteTitle}">${deleteLabel}</button>` : ''}<br><span style="font-size:13px">${state.students.length} studenti · ${state.students.filter(st => st.house).length} smistati</span>`;
     const finalYear = isFinalYearClass(c.name);
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
     $('promoteClassBtn').disabled = activeIsArchived();
@@ -1439,12 +1443,12 @@ input, select, .authbox input {
 
   function deleteArchivedClass(){
     const target = activeClass();
-    if(!target || !target.archived){ showToast('Puoi cancellare soltanto una classe archiviata.'); return; }
+    if(!target || !(target.archived || target.resetForDeletion)){ showToast('Puoi eliminare soltanto una classe archiviata o una classe già azzerata.'); return; }
     if(state.classes.length <= 1){
       alert('Prima di eliminare l’unica classe rimasta, crea una nuova classe.');
       return;
     }
-    const confirmation = 'Vuoi eliminare definitivamente ' + target.name + ' · ' + target.schoolYear + '?\n\nSaranno cancellati da questo browser gli studenti, le Casate, i punteggi e lo storico di questa classe. L’operazione non si può annullare. Esporta prima un backup JSON se vuoi conservarne una copia.';
+    const confirmation = 'Vuoi eliminare definitivamente ' + target.name + ' · ' + target.schoolYear + '?\n\nSaranno cancellati da questo browser la classe, gli studenti, le Casate, i punteggi e lo storico associato. L’operazione non si può annullare. Esporta prima un backup JSON se vuoi conservarne una copia.';
     if(!confirm(confirmation)) return;
     const deletedName = target.name + ' · ' + target.schoolYear;
     state.classes = state.classes.filter(c => c.id !== target.id);
@@ -1457,7 +1461,7 @@ input, select, .authbox input {
     selectedHouse = null;
     save();
     render();
-    showToast('Archivio eliminato: ' + deletedName + '.');
+    showToast('Classe eliminata: ' + deletedName + '.');
   }
 
   $('newClassBtn').onclick = () => {
@@ -1472,7 +1476,7 @@ input, select, .authbox input {
       alert('Esiste già una classe con questo nome nello stesso anno scolastico.'); return;
     }
     const id = 'class-' + state.nextClassId++;
-    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: [], nextId: 1, archived: false });
+    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: [], nextId: 1, archived: false, resetForDeletion: false });
     switchClass(id);
   };
 
@@ -1519,7 +1523,7 @@ input, select, .authbox input {
       id: index + 1, name: st.name, house: st.house, points: 0, history: []
     }));
     const id = 'class-' + state.nextClassId++;
-    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false });
+    state.classes.push({ id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false, resetForDeletion: false });
     switchClass(id);
     showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.');
   };
@@ -1585,6 +1589,7 @@ input, select, .authbox input {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     let n = $('studentName').value.trim();
     if(!n) return;
+    markClassChanged();
     state.students.push({ id: state.nextId++, name: n, house: null, points: 0, history: [] });
     $('studentName').value = '';
     save();
@@ -1605,6 +1610,7 @@ input, select, .authbox input {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     const st = state.students.find(x => String(x.id) === String(id));
     if(!st) return;
+    markClassChanged();
     st.points = (Number(st.points) || 0) + 1;
     st.history = st.history || [];
     st.history.push({ id: Date.now(), date: new Date().toISOString(), grade: 'Encomio speciale', points: 1 });
@@ -1615,6 +1621,7 @@ input, select, .authbox input {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     const st = state.students.find(x => String(x.id) === String(id));
     if(!st) return;
+    markClassChanged();
     st.points = (Number(st.points) || 0) - 1;
     st.history = st.history || [];
     st.history.push({ id: Date.now(), date: new Date().toISOString(), grade: 'Malus', points: -1 });
@@ -1649,7 +1656,7 @@ input, select, .authbox input {
       const name = prompt('Modifica nome e cognome dello studente:', st.name);
       if(name === null) return;
       if(!name.trim()){ alert('Il nome non può essere vuoto.'); return; }
-      st.name = name.trim(); save(); render();
+      markClassChanged(); st.name = name.trim(); save(); render();
     } else if(commend){
       const st = state.students.find(x => String(x.id) === commend.dataset.commend);
       if(st && confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
@@ -1657,6 +1664,7 @@ input, select, .authbox input {
       const st = state.students.find(x => String(x.id) === malus.dataset.malus);
       if(st && confirm('Applicare un malus di −1 punto a ' + st.name + '?')) awardMalus(st.id);
     } else if(remove && confirm('Rimuovere questo studente e il suo storico?')){
+      markClassChanged();
       state.students = state.students.filter(st => String(st.id) !== remove.dataset.id);
       save(); render();
     }
@@ -1684,6 +1692,7 @@ input, select, .authbox input {
       $('modal').classList.add('open');
       return;
     }
+    markClassChanged();
     const k = Object.keys(houses);
     const a = [...u].sort(() => Math.random() - .5);
     // Conteggio iniziale: gli studenti già smistati non vengono mai spostati.
@@ -1716,6 +1725,8 @@ input, select, .authbox input {
         s.points = 0;
         s.history = [];
       });
+      const resetClass = activeClass();
+      if(resetClass) resetClass.resetForDeletion = true;
       save();
       render();
     }
@@ -1764,35 +1775,76 @@ input, select, .authbox input {
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
   function exportExcel() {
-    const sorted = state.students.slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
-    const studentsRows = [['ID','Nome e cognome','Casata','Punti totali']].concat(sorted.map(st => [st.id, st.name, st.house ? houses[st.house] : 'Da smistare', Number(st.points) || 0]));
-    const t = totals();
-    const housesRows = [['Posizione','Casata','Studenti','Punti totali','Media punti per studente']];
-    Object.entries(t).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0])).forEach(([key, points], i) => {
-      const members = state.students.filter(st => st.house === key);
-      const avg = members.length ? members.reduce((sum, st) => sum + (Number(st.points) || 0), 0) / members.length : 0;
-      housesRows.push([i + 1, houses[key], members.length, Number(points.toFixed(2)), Number(avg.toFixed(2))]);
+    const sortedClasses = state.classes.slice().sort((a,b) => Number(Boolean(a.archived)) - Number(Boolean(b.archived)) || compareClasses(a,b));
+    const activeClasses = sortedClasses.filter(c => !c.archived);
+    const houseKeys = Object.keys(houses);
+    const classTotals = c => {
+      const result = { g:0, t:0, r:0, s:0 };
+      c.students.forEach(st => { if(st.house && Object.prototype.hasOwnProperty.call(result, st.house)) result[st.house] += Number(st.points) || 0; });
+      return result;
+    };
+    const sumTotals = classes => classes.reduce((sum,c) => {
+      const t = classTotals(c); houseKeys.forEach(k => sum[k] += t[k]); return sum;
+    }, {g:0,t:0,r:0,s:0});
+    const allStudents = sortedClasses.flatMap(c => c.students.slice().sort((a,b) => a.name.localeCompare(b.name,'it')).map(st => ({ c, st })));
+    const castleTotals = sumTotals(activeClasses);
+    const castleStudents = activeClasses.reduce((n,c) => n + c.students.length, 0);
+    const castleAssigned = activeClasses.reduce((n,c) => n + c.students.filter(st => st.house).length, 0);
+    const castleRows = [
+      ['CASTELLO — RIEPILOGO GENERALE'],
+      ['Classi attive incluse', activeClasses.length],
+      ['Studenti nelle classi attive', castleStudents],
+      ['Studenti smistati', castleAssigned],
+      ['Studenti non smistati', castleStudents - castleAssigned],
+      [],
+      ['Casata','Punti totali','Studenti assegnati','Media punti per studente','Posizione']
+    ];
+    const castleRanking = houseKeys.map(key => ({key, points:castleTotals[key], members:activeClasses.reduce((n,c) => n + c.students.filter(st => st.house === key).length,0)}))
+      .sort((a,b) => b.points-a.points || houses[a.key].localeCompare(houses[b.key],'it'));
+    castleRanking.forEach((item,i) => castleRows.push([houses[item.key], item.points, item.members, item.members ? Number((item.points/item.members).toFixed(2)) : 0, i+1]));
+
+    const classRows = [['Classe','Anno scolastico','Stato','Studenti totali','Studenti smistati','Studenti non smistati','Punti totali','Grifondoro','Tassorosso','Corvonero','Serpeverde']];
+    sortedClasses.forEach(c => {
+      const t = classTotals(c), assigned = c.students.filter(st => st.house).length;
+      classRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',c.students.length,assigned,c.students.length-assigned,houseKeys.reduce((n,k)=>n+t[k],0),t.g,t.t,t.r,t.s]);
     });
-    const movementRows = [['Data','Studente','Casata','Tipo','Voto','Punti']];
-    sorted.forEach(st => (st.history || []).forEach(h => {
+
+    const studentsRows = [['Classe','Anno scolastico','Stato classe','ID studente','Nome e cognome','Casata','Punti totali','Voci nello storico']];
+    allStudents.forEach(({c,st}) => studentsRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',String(st.id ?? ''),st.name,st.house ? houses[st.house] : 'Da smistare',Number(st.points)||0,(st.history||[]).length]));
+
+    const cupRows = [['Ambito','Classe','Anno scolastico','Stato','Grifondoro','Tassorosso','Corvonero','Serpeverde','Punti complessivi','Studenti']];
+    cupRows.push(['Castello','Tutte le classi attive','', 'Cumulativo',castleTotals.g,castleTotals.t,castleTotals.r,castleTotals.s,houseKeys.reduce((n,k)=>n+castleTotals[k],0),castleStudents]);
+    sortedClasses.forEach(c => {
+      const t = classTotals(c);
+      cupRows.push(['Classe',c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',t.g,t.t,t.r,t.s,houseKeys.reduce((n,k)=>n+t[k],0),c.students.length]);
+    });
+
+    const movementRows = [['Classe','Anno scolastico','Stato classe','Data','ID studente','Studente','Casata al momento dell’esportazione','Tipo movimento','Voto','Punti','ID movimento']];
+    allStudents.forEach(({c,st}) => (st.history || []).forEach(h => {
       let date = h.date || (Number.isFinite(Number(h.id)) && Number(h.id) > 100000000000 ? new Date(Number(h.id)).toISOString() : '');
       let type = h.grade === 'Encomio speciale' ? 'Encomio speciale' : h.grade === 'Malus' ? 'Malus' : 'Voto';
-      movementRows.push([date ? String(date).slice(0,10) : '', st.name, st.house ? houses[st.house] : 'Da smistare', type, (h.grade === 'Encomio speciale' || h.grade === 'Malus') ? '' : h.grade, Number(h.points) || 0]);
+      movementRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',date ? String(date).slice(0,10) : '',String(st.id ?? ''),st.name,st.house ? houses[st.house] : 'Da smistare',type,(h.grade === 'Encomio speciale' || h.grade === 'Malus') ? '' : (h.grade ?? ''),Number(h.points)||0,String(h.id ?? '')]);
     }));
-    const sheets = [
-      ['xl/worksheets/sheet1.xml', sheetXml(studentsRows)],
-      ['xl/worksheets/sheet2.xml', sheetXml(housesRows)],
-      ['xl/worksheets/sheet3.xml', sheetXml(movementRows)]
+    const sheetsData = [
+      {name:'Castello', rows:castleRows},
+      {name:'Registro classi', rows:classRows},
+      {name:'Studenti', rows:studentsRows},
+      {name:'Coppa delle Case', rows:cupRows},
+      {name:'Registro punti', rows:movementRows}
     ];
+    const sheets = sheetsData.map((sheet,i) => ['xl/worksheets/sheet' + (i+1) + '.xml', sheetXml(sheet.rows)]);
+    const overrides = sheetsData.map((sheet,i) => '<Override PartName="/xl/worksheets/sheet' + (i+1) + '.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>').join('');
+    const workbookSheets = sheetsData.map((sheet,i) => '<sheet name="' + xmlEscape(sheet.name) + '" sheetId="' + (i+1) + '" r:id="rId' + (i+1) + '"/>').join('');
+    const worksheetRelationships = sheetsData.map((sheet,i) => '<Relationship Id="rId' + (i+1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet' + (i+1) + '.xml"/>').join('');
     const files = [
-      ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet2.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/worksheets/sheet3.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/></Types>'],
+      ['[Content_Types].xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' + overrides + '</Types>'],
       ['_rels/.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
-      ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Studenti" sheetId="1" r:id="rId1"/><sheet name="Coppa delle Case" sheetId="2" r:id="rId2"/><sheet name="Registro punti" sheetId="3" r:id="rId3"/></sheets></workbook>'],
+      ['xl/workbook.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets>' + workbookSheets + '</sheets></workbook>'],
       ['xl/styles.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="11"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts><fills count="3"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill><fill><patternFill patternType="solid"><fgColor rgb="FF40331B"/><bgColor indexed="64"/></patternFill></fill></fills><borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders><cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs><cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="0" fontId="1" fillId="2" borderId="0" xfId="0" applyFont="1" applyFill="1"/></cellXfs><cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>'],
-      ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet3.xml"/><Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+      ['xl/_rels/workbook.xml.rels', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' + worksheetRelationships + '<Relationship Id="rId' + (sheetsData.length+1) + '" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
       ...sheets
     ];
-    downloadBlob(makeZip(files), 'hogwarts-esportazione-' + new Date().toISOString().slice(0,10) + '.xlsx');
+    downloadBlob(makeZip(files), 'hogwarts-esportazione-completa-' + new Date().toISOString().slice(0,10) + '.xlsx');
   }
   $('exportBtn').onclick = () => { try { exportExcel(); showToast('Esportazione Excel avviata.'); } catch(err) { console.error(err); alert('Esportazione Excel non riuscita. Riprova.'); } };
   function makeBackupSnapshot() {
@@ -1922,6 +1974,7 @@ input, select, .authbox input {
       return;
     }
     let p = score(v);
+    markClassChanged();
     s.points += p;
     s.history.push({ id: Date.now(), date: new Date().toISOString(), grade: v, points: p });
     const studentId = String(s.id);
@@ -1950,6 +2003,7 @@ input, select, .authbox input {
     let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
         i = s.history.findIndex(h => String(h.id) === b.dataset.id);
     if(i >= 0 && confirm('Rimuovere questo voto?')){
+      markClassChanged();
       s.points -= s.history[i].points;
       s.history.splice(i, 1);
       save();
