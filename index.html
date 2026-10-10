@@ -1310,6 +1310,11 @@ input, select, .authbox input {
       if(role !== 'teacher' || teacherView !== 'class') return;
       const key = card.dataset.houseCard;
       selectedHouse = selectedHouse === key ? null : key;
+      // Aprire l'elenco della Casata chiude sempre i pannelli operativi.
+      $('classCard').style.display = 'none';
+      $('pointsCard').style.display = 'none';
+      $('manageBtn').classList.remove('primary');
+      $('pointsBtn').classList.remove('primary');
       render();
     };
     card.addEventListener('click', openHouse);
@@ -1548,6 +1553,8 @@ input, select, .authbox input {
     $('pointsBtn').classList.add('primary');
     $('manageBtn').classList.remove('primary');
     history();
+    // Attiva subito il campo voto anche al primo accesso diretto alla scheda Punti.
+    $('gradeInput').focus({ preventScroll: true });
   };
 
   const addStudentAction = () => {
