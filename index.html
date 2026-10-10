@@ -769,7 +769,7 @@ input, select, .authbox input {
   <p class="subtitle">Il Torneo delle Quattro Casate</p>
 </header>
 <main>
-  <p class="intro">Benvenuti nella Sala Grande. Le Casate conquistano punti e portano la propria squadra in cima alla classifica.</p>
+  <p class="intro" style="text-indent:1.5em">Benvenuti nella Sala Grande.<br>Le Casate conquistano punti e portano la propria squadra in cima alla classifica.</p>
   
   <!-- SCELTA PUBBLICA DELLA CLASSE: indipendente dalla classe gestita dal docente -->
   <section class="card public-class-picker" id="publicClassPicker" aria-label="Scegli la classe da visualizzare">
@@ -777,12 +777,11 @@ input, select, .authbox input {
       <span class="public-picker-crest" aria-hidden="true">🏰</span>
       <div>
         <h3>Visita una classe</h3>
-        <p>Seleziona una classe per vedere la sua Coppa delle Case. Sono disponibili soltanto le classi attive.</p>
+        <p>Seleziona una classe per vedere la sua Coppa delle Case.</p>
       </div>
     </div>
     <label for="publicClassSelect">Classe da visualizzare</label>
     <select id="publicClassSelect" aria-label="Scegli la classe da visualizzare"></select>
-    <p id="publicClassCaption" class="public-class-caption" aria-live="polite"></p>
   </section>
 
   <!-- ACCESSO -->
@@ -1019,11 +1018,6 @@ input, select, .authbox input {
       : '<option value="">Nessuna classe attiva disponibile</option>';
     select.disabled = !available.length;
     select.value = selected ? selected.id : (available.length ? ALL_ACTIVE_CLASSES : '');
-    $('publicClassCaption').textContent = !available.length
-      ? 'Non ci sono classi attive da visualizzare.'
-      : selected
-        ? 'Stai visitando ' + selected.name + ' · anno scolastico ' + selected.schoolYear + '.'
-        : 'Stai visitando il Castello: punti di tutte le classi attive. Le classi archiviate sono escluse.';
   }
   function activeClass(){ return state.classes.find(c => c.id === state.activeClassId) || state.classes[0]; }
   function activeIsArchived(){ const c = activeClass(); return Boolean(c && c.archived); }
@@ -1100,7 +1094,7 @@ input, select, .authbox input {
         ? (showingAggregate ? 'Il Castello si anima quando le Casate iniziano a conquistare punti.' : 'La Coppa di ' + (displayedClass ? displayedClass.name : 'questa classe') + ' si accende quando le Casate iniziano a conquistare punti.')
         : leaders.length > 1 ? 'Parità in testa: ' + leaders.map(([k]) => houses[k]).join(' e ') + '!'
         : 'In testa: ' + houses[lead[0]] + ' · ' + formatPoints(lead[1]) + ' punti';
-    $('ranking').querySelector('h3').textContent = '🏆 Coppa delle Case' + (showingAggregate ? ' · Tutte le classi attive' : displayedClass ? ' · ' + displayedClass.name : '');
+    $('ranking').querySelector('h3').textContent = '🏆 Coppa delle Case' + (showingAggregate ? ' · Castello' : displayedClass ? ' · ' + displayedClass.name : '');
     $('rankingList').innerHTML = ranking.map(([k,v],i) => {
       const gap = i === 0 ? null : v - ranking[i-1][1];
       const tied = i > 0 && v === ranking[i-1][1];
