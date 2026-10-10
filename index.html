@@ -979,6 +979,9 @@ input, select, .authbox input {
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
   const KEY = 'hogwartsState';
+  // Segna le modifiche docente non ancora confermate da Supabase: al refresh verranno ritentate.
+  const PENDING_SYNC_KEY = KEY + ':pendingSupabaseSync';
+  let localEditRevision = 0;
   // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
   const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
   const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
@@ -1163,7 +1166,12 @@ input, select, .authbox input {
     const active = activeClass();
     if(active){ active.name = state.className || active.name; active.schoolYear = state.schoolYear || active.schoolYear; active.students = state.students; active.nextId = state.nextId; }
     localStorage.setItem(KEY, JSON.stringify(state));
-    if(supabaseUser && role === 'teacher') queueRemoteSync();
+    if(supabaseUser && role === 'teacher') {
+      localEditRevision++;
+      // Imposta il contrassegno PRIMA di avviare la richiesta di rete: sopravvive a un refresh rapido.
+      try { localStorage.setItem(PENDING_SYNC_KEY, '1'); } catch(e) { console.warn('Impossibile registrare la sincronizzazione in sospeso', e); }
+      queueRemoteSync();
+    }
   }
   const score = v => Number((v - 6).toFixed(2));
   
@@ -1577,9 +1585,17 @@ input, select, .authbox input {
   }
   function queueRemoteSync(){
     if(!supabase || !supabaseUser) return;
-    remoteSyncPromise = remoteSyncPromise.then(() => syncTeacherData()).catch(err => {
+    const revisionAtQueue = localEditRevision;
+    remoteSyncPromise = remoteSyncPromise.then(async () => {
+      await syncTeacherData();
+      // Non cancellare il contrassegno se nel frattempo è stata fatta un'altra modifica.
+      if(revisionAtQueue === localEditRevision) {
+        try { localStorage.removeItem(PENDING_SYNC_KEY); } catch(e) { console.warn(e); }
+      }
+    }).catch(err => {
       console.error('Sincronizzazione Supabase non riuscita:', err);
-      showToast('Modifiche salvate nel browser, ma la sincronizzazione Supabase non è riuscita. Controlla la connessione.');
+      // Il contrassegno resta presente: al prossimo refresh tenteremo di sincronizzare lo stato locale.
+      showToast('Modifiche conservate nel browser; sincronizzazione cloud da completare. Controlla la connessione prima di chiudere la pagina.');
     });
   }
   async function syncTeacherData(){
@@ -2420,28 +2436,46 @@ input, select, .authbox input {
   });
 
   async function initializeApp(){
-    save();
     setRole('student');
-    await loadPublicData();
+    if(!supabase) { await loadPublicData(); return; }
 
-    // Dopo un refresh, ripristina la sessione salvata e ricarica i dati protetti
-    // prima di riaprire la modalita docente.
-    if(!supabase) return;
+    // Controlla prima la sessione: non caricare prima i dati pubblici, perché sostituiscono lo stato in memoria.
     try {
       const { data, error } = await supabase.auth.getSession();
       if(error) throw error;
-      if(!data.session || !data.session.user) return;
-
-      supabaseUser = data.session.user;
-      await loadTeacherData();
-      setRole('teacher');
-      showToast('Sessione docente ripristinata.');
+      if(data.session && data.session.user) {
+        supabaseUser = data.session.user;
+        // Se un refresh ha interrotto una sincronizzazione, recupera lo snapshot locale e ritenta
+        // l'upload prima di ricaricare lo stato cloud, evitando di scartare l'ultima modifica.
+        let hasPendingSync = false;
+        try { hasPendingSync = localStorage.getItem(PENDING_SYNC_KEY) === '1'; } catch(e) { console.warn(e); }
+        if(hasPendingSync) {
+          try {
+            const raw = JSON.parse(localStorage.getItem(KEY) || 'null');
+            if(raw) {
+              state = normalizeState(raw);
+              await syncTeacherData();
+              localStorage.removeItem(PENDING_SYNC_KEY);
+            }
+          } catch(syncErr) {
+            console.error('Recupero della sincronizzazione in sospeso non riuscito:', syncErr);
+            // Non caricare dati cloud potenzialmente più vecchi sopra lo snapshot locale pendente.
+            setRole('teacher');
+            showToast('Sessione ripristinata, ma una modifica attende la sincronizzazione. Controlla la connessione e riprova.');
+            return;
+          }
+        }
+        await loadTeacherData();
+        setRole('teacher');
+        showToast('Sessione docente ripristinata.');
+        return;
+      }
     } catch(err) {
       console.error('Impossibile ripristinare la sessione docente:', err);
       supabaseUser = null;
-      // In caso di errore temporaneo, non cancellare automaticamente la sessione salvata.
-      showToast('Sessione presente, ma non è stato possibile caricare i dati. Riprova.');
+      showToast('Non è stato possibile ripristinare la sessione. Puoi effettuare nuovamente l’accesso.');
     }
+    await loadPublicData();
   }
 
   initializeApp();
