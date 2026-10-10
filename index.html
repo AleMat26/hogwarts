@@ -201,6 +201,26 @@ main {
 .class-manager-controls select { width:100%; }
 .class-manager-note { color:var(--muted); font:13px/1.5 system-ui,sans-serif; margin:10px 0 0; }
 .class-status { display:inline-block; margin-left:8px; padding:4px 8px; border:1px solid #6a5a3a; border-radius:999px; color:var(--gold); font:12px system-ui,sans-serif; }
+#castleClassScores { margin-top:22px; }
+.castle-class-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.castle-class-card { padding:13px 14px; border:1px solid rgba(226,194,122,.28); border-radius:13px; background:linear-gradient(145deg,rgba(35,42,57,.94),rgba(20,25,37,.96)); }
+.castle-class-title { margin:0 0 9px; color:var(--gold-soft); font:700 15px/1.35 system-ui,sans-serif; }
+.castle-class-scores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
+.castle-class-score { display:flex; justify-content:space-between; align-items:center; gap:7px; padding:7px 8px; border-radius:7px; background:#ffffff08; font:12px system-ui,sans-serif; }
+.castle-class-score b { color:var(--gold); white-space:nowrap; }
+.castle-class-score.is-leading { outline:1px solid rgba(226,194,122,.55); }
+.castle-class-score.house-score-g { background:rgba(164,43,53,.24); border:1px solid rgba(190,70,78,.42); }
+.castle-class-score.house-score-t { background:rgba(202,159,48,.23); border:1px solid rgba(218,181,75,.42); }
+.castle-class-score.house-score-r { background:rgba(65,117,178,.25); border:1px solid rgba(89,145,208,.44); }
+.castle-class-score.house-score-s { background:rgba(61,132,83,.25); border:1px solid rgba(77,164,104,.44); }
+.castle-class-score.house-score-g b { color:#f0a0a5; }
+.castle-class-score.house-score-t b { color:#f0d47e; }
+.castle-class-score.house-score-r b { color:#a9d0ff; }
+.castle-class-score.house-score-s b { color:#a5e0b4; }
+#castleClassScores .castle-empty { color:var(--muted); font:14px system-ui,sans-serif; }
+@media(max-width:850px) { .castle-class-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media(max-width:520px) { .castle-class-grid { grid-template-columns:1fr; } }
+
 @keyframes pageReveal { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 @media(max-width:650px) { .ranking-row { grid-template-columns:1fr auto; } .ranking-detail { grid-column:1/-1; text-align:left; } }
 .house:after {
@@ -820,6 +840,7 @@ input, select, .authbox input {
   <div class="controls teacher-controls" id="teacherControls" style="display:none">
     <div class="controls-row">
       <button type="button" class="btn primary" id="sortBtn">🎩 Cappello Parlante</button>
+      <button type="button" class="btn" id="castleViewBtn">🏰 Visualizza Castello</button>
       <button type="button" class="btn" id="logoutBtn">🚪 Esci</button>
     </div>
     <div class="controls-row">
@@ -853,6 +874,12 @@ input, select, .authbox input {
     <h3>🏆 Coppa delle Case</h3>
     <p id="rankingLead" style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La Coppa si accende quando le Casate iniziano a conquistare punti.</p>
     <div id="rankingList" class="list"></div>
+  </section>
+
+  <!-- RIEPILOGO DELLE SINGOLE CLASSI, VISIBILE NELLA MODALITÀ CASTELLO DOCENTE -->
+  <section class="card" id="castleClassScores" style="display:none">
+    <h3>📚 Punteggi delle singole classi</h3>
+    <div id="castleClassGrid" class="castle-class-grid"></div>
   </section>
 
   <!-- GESTIONE OPERATIVA: sotto le Casate e la Coppa delle Case -->
@@ -938,6 +965,7 @@ input, select, .authbox input {
   let failedLogins = 0;
   let loginBusy = false;
   let selectedHouse = null;
+  let teacherView = 'class'; // 'class' oppure 'castle'
 
   const DEFAULT_YEAR = '2026–2027';
   const romanValues = { I:1, V:5, X:10, L:50, C:100, D:500, M:1000 };
@@ -959,6 +987,19 @@ input, select, .authbox input {
   function classGrade(name){
     const match = String(name || '').trim().match(/^([IVXLCDM]+)(?:\s+|$)/i);
     return match ? romanToNumber(match[1]) : 0;
+  }
+  function classSection(name){
+    const match = String(name || '').trim().match(/^[IVXLCDM]+\s+([A-Za-z]+)/i);
+    return match ? match[1].toLocaleUpperCase('it') : 'ZZZ';
+  }
+  function compareClasses(a,b){
+    const sectionOrder = classSection(a.name).localeCompare(classSection(b.name),'it');
+    if(sectionOrder) return sectionOrder;
+    const gradeOrder = classGrade(a.name) - classGrade(b.name);
+    if(gradeOrder) return gradeOrder;
+    const nameOrder = a.name.localeCompare(b.name,'it');
+    if(nameOrder) return nameOrder;
+    return String(a.schoolYear || '').localeCompare(String(b.schoolYear || ''),'it');
   }
   function isFinalYearClass(name){ return classGrade(name) === 5; }
   function nextClassName(name){
@@ -1022,7 +1063,7 @@ input, select, .authbox input {
   function renderPublicClassSelector(){
     const select = $('publicClassSelect');
     if(!select) return;
-    const available = state.classes.filter(c => !c.archived).slice().sort((a,b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || a.name.localeCompare(b.name,'it'));
+    const available = state.classes.filter(c => !c.archived).slice().sort(compareClasses);
     const selected = publicClass();
     select.innerHTML = available.length
       ? `<option value="${ALL_ACTIVE_CLASSES}">🏰 Castello</option>` + available.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}</option>`).join('')
@@ -1055,9 +1096,10 @@ input, select, .authbox input {
     const select = $('activeClassSelect');
     if(!select) return;
     const currentValue = state.activeClassId;
-    select.innerHTML = state.classes.slice().sort((a,b) => String(b.schoolYear).localeCompare(String(a.schoolYear)) || a.name.localeCompare(b.name,'it'))
-      .map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}${c.archived ? ' · Archivio' : ''}</option>`).join('');
-    select.value = currentValue;
+    const orderedClasses = state.classes.slice().sort((a,b) => Number(Boolean(a.archived)) - Number(Boolean(b.archived)) || compareClasses(a,b));
+    const castlePlaceholder = role === 'teacher' && teacherView === 'castle' ? '<option value="">— Seleziona una classe per gestirla —</option>' : '';
+    select.innerHTML = castlePlaceholder + orderedClasses.map(c => `<option value="${esc(c.id)}">${esc(c.name)} · ${esc(c.schoolYear)}${c.archived ? ' · Archivio' : ''}</option>`).join('');
+    select.value = role === 'teacher' && teacherView === 'castle' ? '' : currentValue;
     const c = activeClass();
     $('activeClassSummary').innerHTML = `<strong>${esc(c.name)}</strong> · Anno scolastico ${esc(c.schoolYear)} <span class="class-status">${c.archived ? 'Sola consultazione' : 'Classe attiva'}</span>${c.archived ? ' <button type="button" class="btn small danger" id="deleteArchivedClassBtn" title="Elimina definitivamente questa classe archiviata">🗑️ Cancella archivio</button>' : ''}<br><span style="font-size:13px">${state.students.length} studenti · ${state.students.filter(st => st.house).length} smistati</span>`;
     const finalYear = isFinalYearClass(c.name);
@@ -1075,10 +1117,14 @@ input, select, .authbox input {
     const teacherClass = role === 'teacher' ? activeClass() : null;
     const selectedPublicClass = role === 'teacher' ? null : publicClass();
     const displayedClass = teacherClass || selectedPublicClass;
-    const displayedStudents = role === 'teacher'
-      ? (teacherClass ? teacherClass.students : [])
-      : publicStudents();
-    const showingAggregate = role !== 'teacher' && !selectedPublicClass && state.classes.some(c => !c.archived);
+    const showingAggregate = role === 'teacher'
+      ? teacherView === 'castle'
+      : !selectedPublicClass && state.classes.some(c => !c.archived);
+    const displayedStudents = showingAggregate
+      ? state.classes.filter(c => !c.archived).flatMap(c => c.students)
+      : role === 'teacher'
+        ? (teacherClass ? teacherClass.students : [])
+        : publicStudents();
     const t = totals(displayedStudents);
     Object.keys(t).forEach(k => {
       const el = document.querySelector(`[data-house="${k}"]`);
@@ -1113,8 +1159,14 @@ input, select, .authbox input {
       return `<div class="ranking-row ${v === lead[1] && lead[1] > 0 ? 'leader' : ''} ${leaders.length > 1 && v === lead[1] ? 'tied-leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${formatPoints(v)} punti</b><span class="ranking-detail">${detail}</span></div>`;
     }).join('');
 
+    renderCastleClassScores();
+    $('castleClassScores').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
+    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' ? 'flex' : 'none';
+    $('classCard').style.display = role === 'teacher' && teacherView === 'class' && $('manageBtn').classList.contains('primary') ? 'block' : 'none';
+    $('pointsCard').style.display = role === 'teacher' && teacherView === 'class' && $('pointsBtn').classList.contains('primary') ? 'block' : 'none';
+
     document.querySelectorAll('.house').forEach(card => {
-      const isTeacher = role === 'teacher';
+      const isTeacher = role === 'teacher' && teacherView === 'class';
       card.classList.toggle('clickable', isTeacher);
       card.classList.toggle('selected', isTeacher && card.dataset.houseCard === selectedHouse);
       card.tabIndex = isTeacher ? 0 : -1;
@@ -1133,8 +1185,24 @@ input, select, .authbox input {
 
   const formatPoints = n => Number((Number(n) || 0).toFixed(2)).toLocaleString('it-IT', { maximumFractionDigits: 2 });
 
+  function renderCastleClassScores(){
+    const grid = $('castleClassGrid');
+    if(!grid) return;
+    const classes = state.classes.filter(c => !c.archived).slice().sort(compareClasses);
+    if(!classes.length){
+      grid.innerHTML = '<div class="castle-empty">Non ci sono classi attive da visualizzare.</div>';
+      return;
+    }
+    grid.innerHTML = classes.map(c => {
+      const t = totals(c.students);
+      const max = Math.max(...Object.values(t));
+      const order = Object.entries(t).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
+      return `<article class="castle-class-card"><h4 class="castle-class-title">${esc(c.name)} <span style="color:var(--muted);font-weight:400">· ${esc(c.schoolYear)}</span></h4><div class="castle-class-scores">${order.map(([key,value]) => `<div class="castle-class-score house-score-${key} ${max > 0 && value === max ? 'is-leading' : ''}"><span>${houses[key]}</span><b>${formatPoints(value)} pt</b></div>`).join('')}</div></article>`;
+    }).join('');
+  }
+
   function renderHouseStudents(){
-    if(role !== 'teacher' || !selectedHouse) {
+    if(role !== 'teacher' || teacherView !== 'class' || !selectedHouse) {
       $('houseStudentsPanel').style.display = 'none';
       return;
     }
@@ -1164,7 +1232,7 @@ input, select, .authbox input {
         <b>${esc(st.name)}</b>
         <span class="${st.house ? '' : 'unassigned'}" style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${st.house ? houses[st.house] : '🎩 Da smistare'}</span>
         <span>${formatPoints(st.points || 0)} pt</span>
-        <div class="student-actions"><button type="button" class="btn small" data-edit="${st.id}">✎ Rinomina</button><button type="button" class="btn small commend" data-commend="${st.id}">✨ Encomio +1</button><button type="button" class="btn small" data-malus="${st.id}">⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${st.id}">🗑 Rimuovi</button></div>
+        <div class="student-actions"><button type="button" class="btn small" data-edit="${st.id}">✎ Rinomina</button>${st.house ? `<button type="button" class="btn small" data-assign-points="${st.id}">🏆 Punti</button>` : ''}<button type="button" class="btn small commend" data-commend="${st.id}">✨ Encomio +1</button><button type="button" class="btn small" data-malus="${st.id}">⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${st.id}">🗑 Rimuovi</button></div>
       </div>`
     ).join('') || '<div class="house-students-empty">Nessuno studente corrisponde ai filtri.</div>';
 
@@ -1201,6 +1269,7 @@ input, select, .authbox input {
   function setRole(r){
     role = r;
     if(r !== 'teacher') selectedHouse = null;
+    if(r === 'teacher') teacherView = 'class';
     const isTeacher = r === 'teacher';
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherWorkControls').style.display = isTeacher ? 'flex' : 'none';
@@ -1210,6 +1279,9 @@ input, select, .authbox input {
     $('publicClassPicker').style.display = isTeacher ? 'none' : 'block';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
+    $('castleClassScores').style.display = 'none';
+    $('castleViewBtn').style.display = isTeacher ? 'inline-block' : 'none';
+    $('castleViewBtn').classList.remove('primary');
     $('manageBtn').classList.remove('primary');
     $('pointsBtn').classList.remove('primary');
     $('authBox').style.display = 'none';
@@ -1225,7 +1297,7 @@ input, select, .authbox input {
   // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
   document.querySelectorAll('.house').forEach(card => {
     const openHouse = () => {
-      if(role !== 'teacher') return;
+      if(role !== 'teacher' || teacherView !== 'class') return;
       const key = card.dataset.houseCard;
       selectedHouse = selectedHouse === key ? null : key;
       render();
@@ -1308,6 +1380,7 @@ input, select, .authbox input {
   function switchClass(classId){
     const target = state.classes.find(c => c.id === String(classId));
     if(!target) return;
+    if(role === 'teacher') teacherView = 'class';
     save();
     state.activeClassId = target.id;
     state.className = target.name;
@@ -1321,6 +1394,8 @@ input, select, .authbox input {
     $('gradeInput').value = '';
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
+    $('castleViewBtn').style.display = role === 'teacher' ? 'inline-block' : 'none';
+    $('castleViewBtn').classList.remove('primary');
     $('manageBtn').classList.remove('primary');
     $('pointsBtn').classList.remove('primary');
     save();
@@ -1417,9 +1492,24 @@ input, select, .authbox input {
     showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.');
   };
 
+  // Vista Castello: riepilogo cumulativo di tutte le classi attive, senza pannelli operativi.
+  // Per tornare alla gestione si seleziona una classe dal menu a tendina.
+  $('castleViewBtn').onclick = () => {
+    teacherView = 'castle';
+    selectedHouse = null;
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.remove('primary');
+    $('castleViewBtn').style.display = 'none';
+    render();
+  };
+
   // Le schede operative si aprono sotto ai pulsanti senza spostare la pagina.
   // La scheda selezionata resta aperta anche se si riclicca sul suo pulsante.
   $('manageBtn').onclick = () => {
+    teacherView = 'class';
+    $('castleViewBtn').style.display = 'inline-block';
     $('classCard').style.display = 'block';
     $('pointsCard').style.display = 'none';
     $('manageBtn').classList.add('primary');
@@ -1427,6 +1517,8 @@ input, select, .authbox input {
   };
 
   $('pointsBtn').onclick = () => {
+    teacherView = 'class';
+    $('castleViewBtn').style.display = 'inline-block';
     $('pointsCard').style.display = 'block';
     $('classCard').style.display = 'none';
     $('pointsBtn').classList.add('primary');
@@ -1478,10 +1570,25 @@ input, select, .authbox input {
   $('classList').onclick = e => {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     const edit = e.target.closest('[data-edit]');
+    const assignPoints = e.target.closest('[data-assign-points]');
     const commend = e.target.closest('[data-commend]');
     const malus = e.target.closest('[data-malus]');
     const remove = e.target.closest('.remove');
-    if(edit){
+    if(assignPoints){
+      const st = state.students.find(x => String(x.id) === assignPoints.dataset.assignPoints);
+      if(!st || !st.house) return;
+      teacherView = 'class';
+      $('castleViewBtn').style.display = 'inline-block';
+      $('classCard').style.display = 'none';
+      $('pointsCard').style.display = 'block';
+      $('manageBtn').classList.remove('primary');
+      $('pointsBtn').classList.add('primary');
+      render();
+      $('pointsStudent').value = String(st.id);
+      history();
+      $('pointsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      $('gradeInput').focus({ preventScroll: true });
+    } else if(edit){
       const st = state.students.find(x => String(x.id) === edit.dataset.edit);
       if(!st) return;
       const name = prompt('Modifica nome e cognome dello studente:', st.name);
@@ -1656,7 +1763,10 @@ input, select, .authbox input {
     finally { $('restoreFile').value = ''; }
   };
 
-  $('pointsStudent').onchange = history;
+  $('pointsStudent').onchange = () => {
+    history();
+    if(role === 'teacher' && teacherView === 'class' && $('pointsCard').style.display !== 'none') $('gradeInput').focus({ preventScroll: true });
+  };
 
   $('gradeInput').oninput = () => {
     let v = parseFloat($('gradeInput').value);
