@@ -1795,28 +1795,110 @@ input, select, .authbox input {
     downloadBlob(makeZip(files), 'hogwarts-esportazione-' + new Date().toISOString().slice(0,10) + '.xlsx');
   }
   $('exportBtn').onclick = () => { try { exportExcel(); showToast('Esportazione Excel avviata.'); } catch(err) { console.error(err); alert('Esportazione Excel non riuscita. Riprova.'); } };
+  function makeBackupSnapshot() {
+    // Serializzare e rileggere crea una copia indipendente: il backup non punta allo stato vivo dell'app.
+    const snapshot = JSON.parse(JSON.stringify(state));
+    return {
+      format: 'hogwarts-torneo-backup',
+      version: 2,
+      exportedAt: new Date().toISOString(),
+      app: 'Hogwarts – Coppa delle Casate',
+      summary: {
+        classes: snapshot.classes.length,
+        activeClasses: snapshot.classes.filter(c => !c.archived).length,
+        archivedClasses: snapshot.classes.filter(c => c.archived).length,
+        students: snapshot.classes.reduce((n, c) => n + c.students.length, 0),
+        historyEntries: snapshot.classes.reduce((n, c) => n + c.students.reduce((m, st) => m + st.history.length, 0), 0)
+      },
+      state: snapshot
+    };
+  }
+  function validateBackupState(raw) {
+    if(!raw || typeof raw !== 'object') throw new Error('Il contenuto non è un oggetto valido.');
+    const hasClasses = Array.isArray(raw.classes);
+    if(hasClasses) {
+      if(raw.classes.length === 0) throw new Error('Il backup non contiene classi.');
+      const classIds = new Set();
+      for(const c of raw.classes) {
+        if(!c || typeof c !== 'object' || typeof c.name !== 'string' || !c.name.trim() || !Array.isArray(c.students)) throw new Error('Una classe è incompleta o non valida.');
+        if(c.id != null) {
+          const id = String(c.id);
+          if(classIds.has(id)) throw new Error('Sono presenti identificativi di classe duplicati.');
+          classIds.add(id);
+        }
+        const studentIds = new Set();
+        for(const st of c.students) {
+          if(!st || typeof st !== 'object' || typeof st.name !== 'string' || !st.name.trim()) throw new Error('È presente uno studente senza nome valido.');
+          if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casata non riconosciuta.');
+          if(st.points != null && (typeof st.points !== 'number' || !Number.isFinite(st.points))) throw new Error('È presente un punteggio non valido.');
+          if(st.id != null) {
+            const id = String(st.id);
+            if(studentIds.has(id)) throw new Error('Sono presenti identificativi di studente duplicati nella stessa classe.');
+            studentIds.add(id);
+          }
+          if(st.history != null && !Array.isArray(st.history)) throw new Error('Lo storico di uno studente non è valido.');
+          for(const h of (st.history || [])) {
+            if(!h || typeof h !== 'object' || (h.points != null && (typeof h.points !== 'number' || !Number.isFinite(h.points)))) throw new Error('Una voce dello storico è incompleta o non valida.');
+          }
+        }
+      }
+      if(raw.activeClassId != null && !raw.classes.some(c => String(c.id) === String(raw.activeClassId))) throw new Error('La classe selezionata nel backup non esiste.');
+      return;
+    }
+    // Compatibilità con il formato precedente, che salvava una sola classe al livello principale.
+    if(!Array.isArray(raw.students) || !raw.students.every(st => st && typeof st.name === 'string' && st.name.trim())) throw new Error('Il file non contiene una struttura Hogwarts riconosciuta.');
+    for(const st of raw.students) {
+      if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casata non riconosciuta.');
+      if(st.points != null && (typeof st.points !== 'number' || !Number.isFinite(st.points))) throw new Error('È presente un punteggio non valido.');
+      if(st.history != null && !Array.isArray(st.history)) throw new Error('Lo storico di uno studente non è valido.');
+      for(const h of (st.history || [])) if(!h || typeof h !== 'object' || (h.points != null && (typeof h.points !== 'number' || !Number.isFinite(h.points)))) throw new Error('Una voce dello storico è incompleta o non valida.');
+    }
+  }
   $('backupBtn').onclick = () => {
     try {
-      const backup = { format: 'hogwarts-torneo-backup', version: 1, exportedAt: new Date().toISOString(), state };
-      downloadBlob(new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json;charset=utf-8' }), 'hogwarts-backup-' + new Date().toISOString().slice(0,10) + '.json');
-      showToast('Backup JSON pronto. Conserva il file in un luogo sicuro.');
-    } catch(err) { console.error(err); alert('Backup non riuscito. Riprova.'); }
+      const backup = makeBackupSnapshot();
+      const contents = JSON.stringify(backup, null, 2);
+      if(!contents || contents.length < 2) throw new Error('Backup vuoto.');
+      downloadBlob(new Blob([contents], { type: 'application/json;charset=utf-8' }), 'hogwarts-backup-' + new Date().toISOString().slice(0,10) + '.json');
+      showToast('Backup JSON completo creato. Conserva il file in un luogo sicuro.');
+    } catch(err) { console.error(err); alert('Backup non riuscito. I dati nel browser non sono stati modificati. Riprova.'); }
   };
   $('restoreBtn').onclick = () => $('restoreFile').click();
   $('restoreFile').onchange = async () => {
     const file = $('restoreFile').files && $('restoreFile').files[0];
     if(!file) return;
     try {
+      if(file.size === 0) throw new Error('File vuoto.');
       const data = JSON.parse(await file.text());
-      const restored = data && data.format === 'hogwarts-torneo-backup' ? data.state : data;
-      const valid = restored && (Array.isArray(restored.classes) && restored.classes.every(c => c && typeof c.name === 'string' && Array.isArray(c.students)) || Array.isArray(restored.students) && restored.students.every(st => st && typeof st.name === 'string'));
-      if(!valid) throw new Error('Formato non valido');
-      if(!confirm('Il ripristino sostituirà i dati attualmente presenti in questo browser. Vuoi continuare?')) return;
-      state = normalizeState(restored);
+      let restored;
+      if(data && data.format === 'hogwarts-torneo-backup') {
+        if(![1,2].includes(data.version)) throw new Error('Versione del backup non supportata.');
+        if(!data.state) throw new Error('Il backup non contiene i dati.');
+        restored = data.state;
+      } else {
+        // Accetta anche i vecchi file JSON esportati prima dell'introduzione del formato versionato.
+        restored = data;
+      }
+      validateBackupState(restored);
+      const candidate = normalizeState(restored);
+      if(!candidate.classes || !candidate.classes.length) throw new Error('Il backup non contiene classi ripristinabili.');
+      const classCount = candidate.classes.length;
+      const studentCount = candidate.classes.reduce((n, c) => n + c.students.length, 0);
+      if(!confirm('Stai per ripristinare un backup con ' + classCount + ' class' + (classCount === 1 ? 'e' : 'i') + ' e ' + studentCount + ' student' + (studentCount === 1 ? 'e' : 'i') + '.\n\nI dati attualmente presenti in questo browser saranno sostituiti. Prima di procedere, assicurati di avere una copia di backup dei dati correnti. Vuoi continuare?')) return;
+      const previousState = state;
+      try {
+        state = candidate;
+        save();
+      } catch(storageError) {
+        state = previousState;
+        throw new Error('Il browser non è riuscito a salvare i dati ripristinati. I dati in memoria sono stati mantenuti.');
+      }
       resetPointsSelection = true; $('gradeInput').value = '';
-      save(); selectedHouse = null; render(); renderClassManager(); showToast('Backup ripristinato correttamente.');
-    } catch(err) { console.error(err); alert('Impossibile ripristinare il file. Scegli un backup JSON valido di Hogwarts.'); }
-    finally { $('restoreFile').value = ''; }
+      selectedHouse = null; render(); renderClassManager(); showToast('Backup ripristinato correttamente.');
+    } catch(err) {
+      console.error(err);
+      alert('Ripristino annullato: ' + (err && err.message ? err.message : 'file JSON non valido') + '\n\nI dati esistenti non sono stati sostituiti.');
+    } finally { $('restoreFile').value = ''; }
   };
 
   $('pointsStudent').onchange = () => {
