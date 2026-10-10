@@ -966,6 +966,7 @@ input, select, .authbox input {
   let loginBusy = false;
   let selectedHouse = null;
   let teacherView = 'class'; // 'class' oppure 'castle'
+  let resetPointsSelection = true;
 
   const DEFAULT_YEAR = '2026–2027';
   const romanValues = { I:1, V:5, X:10, L:50, C:100, D:500, M:1000 };
@@ -1219,7 +1220,7 @@ input, select, .authbox input {
   }
 
   function renderTeacher(){
-    const previouslySelected = $('pointsStudent').value;
+    const previouslySelected = resetPointsSelection ? '' : $('pointsStudent').value;
     const query = ($('studentSearch').value || '').trim().toLocaleLowerCase('it');
     const filter = $('houseFilter').value || 'all';
     const visible = state.students.filter(st => {
@@ -1239,7 +1240,14 @@ input, select, .authbox input {
     $('pointsStudent').innerHTML = state.students.filter(st => st.house)
       .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
       .map(st => `<option value="${st.id}">${esc(st.name)} — ${houses[st.house]}</option>`).join('');
-    if ([...$('pointsStudent').options].some(o => o.value === previouslySelected)) $('pointsStudent').value = previouslySelected;
+    if (previouslySelected && [...$('pointsStudent').options].some(o => o.value === previouslySelected)) {
+      $('pointsStudent').value = previouslySelected;
+    } else if ($('pointsStudent').options.length) {
+      $('pointsStudent').selectedIndex = 0;
+    } else {
+      $('pointsStudent').value = '';
+    }
+    resetPointsSelection = false;
     const readOnly = activeIsArchived();
     $('sortBtn').disabled = readOnly || !state.students.length || state.students.every(st => st.house);
     $('studentName').disabled = readOnly;
@@ -1269,7 +1277,9 @@ input, select, .authbox input {
   function setRole(r){
     role = r;
     if(r !== 'teacher') selectedHouse = null;
-    if(r === 'teacher') teacherView = 'class';
+    if(r === 'teacher') teacherView = 'castle';
+    resetPointsSelection = true;
+    $('gradeInput').value = '';
     const isTeacher = r === 'teacher';
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherWorkControls').style.display = isTeacher ? 'flex' : 'none';
@@ -1280,7 +1290,7 @@ input, select, .authbox input {
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
     $('castleClassScores').style.display = 'none';
-    $('castleViewBtn').style.display = isTeacher ? 'inline-block' : 'none';
+    $('castleViewBtn').style.display = isTeacher && teacherView === 'class' ? 'inline-block' : 'none';
     $('castleViewBtn').classList.remove('primary');
     $('manageBtn').classList.remove('primary');
     $('pointsBtn').classList.remove('primary');
@@ -1381,6 +1391,7 @@ input, select, .authbox input {
     const target = state.classes.find(c => c.id === String(classId));
     if(!target) return;
     if(role === 'teacher') teacherView = 'class';
+    resetPointsSelection = true;
     save();
     state.activeClassId = target.id;
     state.className = target.name;
@@ -1496,6 +1507,9 @@ input, select, .authbox input {
   // Per tornare alla gestione si seleziona una classe dal menu a tendina.
   $('castleViewBtn').onclick = () => {
     teacherView = 'castle';
+    resetPointsSelection = true;
+    $('gradeInput').value = '';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10.';
     selectedHouse = null;
     $('classCard').style.display = 'none';
     $('pointsCard').style.display = 'none';
@@ -1509,6 +1523,11 @@ input, select, .authbox input {
   // La scheda selezionata resta aperta anche se si riclicca sul suo pulsante.
   $('manageBtn').onclick = () => {
     teacherView = 'class';
+    resetPointsSelection = true;
+    $('pointsStudent').selectedIndex = $('pointsStudent').options.length ? 0 : -1;
+    $('gradeInput').value = '';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10.';
+    history();
     $('castleViewBtn').style.display = 'inline-block';
     $('classCard').style.display = 'block';
     $('pointsCard').style.display = 'none';
@@ -1518,6 +1537,11 @@ input, select, .authbox input {
 
   $('pointsBtn').onclick = () => {
     teacherView = 'class';
+    resetPointsSelection = true;
+    $('pointsStudent').selectedIndex = $('pointsStudent').options.length ? 0 : -1;
+    $('gradeInput').value = '';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10.';
+    history();
     $('castleViewBtn').style.display = 'inline-block';
     $('pointsCard').style.display = 'block';
     $('classCard').style.display = 'none';
@@ -1758,6 +1782,7 @@ input, select, .authbox input {
       if(!valid) throw new Error('Formato non valido');
       if(!confirm('Il ripristino sostituirà i dati attualmente presenti in questo browser. Vuoi continuare?')) return;
       state = normalizeState(restored);
+      resetPointsSelection = true; $('gradeInput').value = '';
       save(); selectedHouse = null; render(); renderClassManager(); showToast('Backup ripristinato correttamente.');
     } catch(err) { console.error(err); alert('Impossibile ripristinare il file. Scegli un backup JSON valido di Hogwarts.'); }
     finally { $('restoreFile').value = ''; }
