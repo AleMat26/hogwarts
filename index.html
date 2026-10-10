@@ -2078,6 +2078,21 @@ input, select, .authbox input {
     }
   };
 
+  // Un clic sullo sfondo chiude le schede operative della classe.
+  document.addEventListener('click', e => {
+    if(role !== 'teacher' || teacherView !== 'class') return;
+    const target = e.target;
+    // I clic dentro le schede o sui pulsanti che le aprono non devono chiuderle.
+    if(target.closest('#classCard, #pointsCard, #manageBtn, #pointsBtn')) return;
+    const classOpen = $('classCard').style.display !== 'none';
+    const pointsOpen = $('pointsCard').style.display !== 'none';
+    if(!classOpen && !pointsOpen) return;
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.remove('primary');
+  });
+
   // Un clic fuori dallo stendardo e dal suo elenco chiude il pannello studenti.
   document.addEventListener('click', e => {
     if(role !== 'teacher' || !selectedHouse) return;
