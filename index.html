@@ -1277,7 +1277,7 @@ input, select, .authbox input {
     $('promoteClassBtn').title = !c ? 'Crea prima una classe.' : activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
-    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera';
+    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera punteggi';
     const resetAlreadyDone = role === 'teacher' && teacherView === 'castle'
       ? !state.classes.length || state.classes.every(cl => cl.resetForDeletion)
       : !c || activeIsArchived() || Boolean(c.resetForDeletion);
