@@ -2,6 +2,7 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
+<meta name="hogwarts-revision" content="2026-10-11-promozione-fix-2">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hogwarts — Il Torneo delle Quattro Casate</title>
 <style>
@@ -1271,11 +1272,24 @@ input, select, .authbox input {
     } else {
       $('activeClassSummary').innerHTML = '<strong>🏰 Castello</strong> <span class="class-status">Nessuna classe presente</span><br><span style="font-size:13px">Puoi creare una nuova classe oppure ripristinare un backup JSON.</span>';
     }
-    const finalYear = c ? isFinalYearClass(c.name) : false;
+    // I controlli di promozione dipendono dalla selezione esplicita della classe,
+    // non soltanto dalla classe attiva di ripiego usata dal Castello.
+    const selectedClassId = select.value;
+    const managingSingleClass = role === 'teacher'
+      && teacherView === 'class'
+      && Boolean(c)
+      && selectedClassId !== ''
+      && String(selectedClassId) === String(c.id);
+    const finalYear = managingSingleClass && isFinalYearClass(c.name);
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
-    const canPromoteCurrentClass = role === 'teacher' && teacherView === 'class' && Boolean(c) && !Boolean(c.archived);
-    $('promoteClassBtn').disabled = !canPromoteCurrentClass;
-    $('promoteClassBtn').title = !c ? 'Seleziona una classe da gestire.' : teacherView === 'castle' ? 'Seleziona una classe per promuoverla.' : c.archived ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Dopo l’Esame di Stato, archivia la classe quinta senza creare una classe successiva.' : 'Crea la classe dell’anno successivo conservando le Casate.';
+    $('promoteClassBtn').disabled = !managingSingleClass || Boolean(c && c.archived);
+    $('promoteClassBtn').title = !managingSingleClass
+      ? 'Seleziona una classe attiva dal menu per promuoverla.'
+      : c.archived
+        ? 'La classe archiviata è in sola consultazione.'
+        : finalYear
+          ? 'Dopo l’Esame di Stato, archivia la classe quinta senza creare una classe successiva.'
+          : 'Crea la classe dell’anno successivo conservando le Casate.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
     $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera la classe';
