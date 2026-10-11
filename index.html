@@ -1540,6 +1540,19 @@ input, select, .authbox input {
 
   // Event Listeners
   $('castleStudentSearchInput').addEventListener('input', renderCastleStudentSearch);
+  // Nel Castello, cliccando fuori dalla ricerca si chiudono i risultati e si svuota il campo.
+  // I clic sul campo o sui risultati non vengono intercettati qui, così la ricerca resta usabile.
+  document.addEventListener('click', e => {
+    const searchPanel = $('castleStudentSearch');
+    const searchInput = $('castleStudentSearchInput');
+    if(!searchPanel || !searchInput) return;
+    if(role !== 'teacher' || teacherView !== 'castle') return;
+    if(e.target.closest('#castleStudentSearch')) return;
+    if(searchInput.value !== '') {
+      searchInput.value = '';
+      renderCastleStudentSearch();
+    }
+  });
   $('castleClassGrid').addEventListener('click', e => {
     const card = e.target.closest('[data-castle-class]');
     if(!card) return;
