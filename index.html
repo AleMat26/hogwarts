@@ -2,7 +2,6 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="hogwarts-revision" content="2026-10-11-promozione-fix-2">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Hogwarts — Il Torneo delle Quattro Casate</title>
 <style>
@@ -1272,31 +1271,13 @@ input, select, .authbox input {
     } else {
       $('activeClassSummary').innerHTML = '<strong>🏰 Castello</strong> <span class="class-status">Nessuna classe presente</span><br><span style="font-size:13px">Puoi creare una nuova classe oppure ripristinare un backup JSON.</span>';
     }
-    // I controlli di promozione dipendono dalla selezione esplicita della classe,
-    // non soltanto dalla classe attiva di ripiego usata dal Castello.
-    const selectedClassId = select.value;
-    const managingSingleClass = role === 'teacher'
-      && teacherView === 'class'
-      && Boolean(c)
-      && selectedClassId !== ''
-      && String(selectedClassId) === String(c.id);
-    const finalYear = managingSingleClass && isFinalYearClass(c.name);
+    const finalYear = c ? isFinalYearClass(c.name) : false;
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
-    $('promoteClassBtn').disabled = !managingSingleClass || Boolean(c && c.archived);
-    $('promoteClassBtn').title = !managingSingleClass
-      ? 'Seleziona una classe attiva dal menu per promuoverla.'
-      : c.archived
-        ? 'La classe archiviata è in sola consultazione.'
-        : finalYear
-          ? 'Dopo l’Esame di Stato, archivia la classe quinta senza creare una classe successiva.'
-          : 'Crea la classe dell’anno successivo conservando le Casate.';
+    $('promoteClassBtn').disabled = !c || activeIsArchived() || (role === 'teacher' && teacherView === 'castle');
+    $('promoteClassBtn').title = !c ? 'Crea prima una classe.' : activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
-    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera la classe';
-    const resetAlreadyDone = role === 'teacher' && teacherView === 'castle'
-      ? !state.classes.length || state.classes.every(cl => cl.resetForDeletion)
-      : !c || activeIsArchived() || Boolean(c.resetForDeletion);
-    $('resetBtn').disabled = resetAlreadyDone || role !== 'teacher';
+    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera';
     $('sortBtn').disabled = (role === 'teacher' && teacherView === 'castle') || activeIsArchived() || !state.students.length || state.students.every(st => st.house);
   }
 
@@ -1536,10 +1517,7 @@ input, select, .authbox input {
     $('saveGrade').disabled = readOnly;
     $('commendBtn').disabled = readOnly;
     $('malusBtn').disabled = readOnly;
-    const resetAlreadyDone = role === 'teacher' && teacherView === 'castle'
-      ? !state.classes.length || state.classes.every(cl => cl.resetForDeletion)
-      : !teacherClass || readOnly || Boolean(teacherClass.resetForDeletion);
-    $('resetBtn').disabled = resetAlreadyDone || role !== 'teacher';
+    $('resetBtn').disabled = role === 'teacher' && teacherView === 'castle' ? !state.classes.length : readOnly;
     $('classList').querySelectorAll('button').forEach(button => button.disabled = readOnly);
     history();
   }
@@ -2137,10 +2115,8 @@ input, select, .authbox input {
   };
 
   $('promoteClassBtn').onclick = () => {
-    if(role !== 'teacher' || teacherView !== 'class') { showToast('Seleziona una classe dalla modalità docente.'); return; }
+    if(activeIsArchived()){ alert('Seleziona una classe attiva da promuovere.'); return; }
     const current = activeClass();
-    if(!current) { showToast('Seleziona una classe da gestire.'); return; }
-    if(current.archived){ alert('La classe archiviata è in sola consultazione. Seleziona una classe attiva.'); return; }
     if(isFinalYearClass(current.name)){
       const confirmation = 'Vuoi concludere il percorso della classe ' + current.name + ' · ' + current.schoolYear + '?\n\nLa classe sarà archiviata in sola consultazione. Studenti, Casate, punteggi e storico saranno conservati nell’archivio. Non verrà creata una classe successiva.';
       if(!confirm(confirmation)) return;
@@ -2763,19 +2739,13 @@ input, select, .authbox input {
         ? '\n\nSe sei autenticato, il ripristino verrà anche sincronizzato con Supabase e potrà sostituire le classi e i dati cloud del tuo account che non sono presenti nel backup.'
         : '';
       if(!confirm('Stai per ripristinare un backup con ' + classCount + ' class' + (classCount === 1 ? 'e' : 'i') + ' e ' + studentCount + ' student' + (studentCount === 1 ? 'e' : 'i') + '.\n\nI dati attualmente presenti in questo browser saranno sostituiti.' + cloudWarning + '\n\nPrima di procedere, assicurati di avere una copia di backup dei dati correnti. Vuoi continuare?')) return;
-      const restoreButton = $('restoreBtn');
-      const restoreButtonLabel = restoreButton.textContent;
-      restoreButton.disabled = true;
-      restoreButton.textContent = '⏳ Ripristino e sincronizzazione…';
+      const previousState = state;
       try {
-        // Attendi eventuali salvataggi già in corso prima di sostituire lo stato.
-        await remoteSyncPromise;
         state = candidate;
-        saveLocalOnly();
+        save();
       } catch(storageError) {
-        restoreButton.disabled = false;
-        restoreButton.textContent = restoreButtonLabel;
-        throw new Error('Il browser non è riuscito a salvare i dati ripristinati. Il ripristino non è stato completato.');
+        state = previousState;
+        throw new Error('Il browser non è riuscito a salvare i dati ripristinati. I dati in memoria sono stati mantenuti.');
       }
       resetPointsSelection = true; $('gradeInput').value = '';
       selectedHouse = null;
@@ -2788,35 +2758,11 @@ input, select, .authbox input {
       $('pointsBtn').classList.remove('primary');
       $('castleViewBtn').style.display = 'none';
       publicClassId = ALL_ACTIVE_CLASSES;
-      render(); renderClassManager();
-      if(supabaseUser && role === 'teacher') {
-        // Il backup può contenere vecchi ID Supabase, ormai cancellati. Forza una
-        // riconciliazione completa basata sui client_id e attendi la conferma cloud.
-        lastSyncedClasses = null;
-        try {
-          await syncTeacherData();
-          saveLocalOnly();
-          lastRemoteSyncError = null;
-          render(); renderClassManager();
-          showToast('Backup ripristinato e sincronizzato con Supabase.');
-        } catch(syncError) {
-          lastRemoteSyncError = syncError;
-          console.error('Ripristino locale riuscito, ma sincronizzazione Supabase non riuscita:', syncError);
-          showToast('Backup nel browser, ma sincronizzazione Supabase non riuscita. Resta in modalità docente e riprova.');
-          alert('Il backup è stato caricato nel browser, ma non è stato possibile completare la sincronizzazione con Supabase. I dati locali sono conservati. Resta nella modalità docente e riprova il ripristino; non uscire finché la sincronizzazione non è riuscita.\n\nDettaglio: ' + (syncError && syncError.message ? syncError.message : 'errore di sincronizzazione'));
-          return;
-        }
-      } else {
-        showToast('Backup ripristinato nel browser. Per renderlo disponibile sugli altri dispositivi, accedi alla modalità docente e sincronizzalo.');
-      }
+      render(); renderClassManager(); showToast('Backup ripristinato correttamente. Visualizzazione Castello.');
     } catch(err) {
       console.error(err);
-      alert('Ripristino non completato: ' + (err && err.message ? err.message : 'file JSON non valido') + '\n\nControlla i dati e riprova.');
-    } finally {
-      $('restoreBtn').disabled = false;
-      $('restoreBtn').textContent = '↥ Ripristina backup';
-      $('restoreFile').value = '';
-    }
+      alert('Ripristino annullato: ' + (err && err.message ? err.message : 'file JSON non valido') + '\n\nI dati esistenti non sono stati sostituiti.');
+    } finally { $('restoreFile').value = ''; }
   };
 
   $('pointsStudent').onchange = () => {
