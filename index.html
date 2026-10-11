@@ -1029,6 +1029,8 @@ input, select, .authbox input {
   // Fotografia dell’ultimo stato confermato su Supabase: permette di inviare solo differenze.
   let lastSyncedClasses = null;
   let publicScores = null;
+  // La homepage non mostra classi locali finché Supabase non ha risposto.
+  let publicDataStatus = 'loading'; // 'loading', 'loaded', 'error'
   const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
@@ -1150,7 +1152,14 @@ input, select, .authbox input {
   // La scelta di una singola classe vale per la visualizzazione corrente, non per la classe gestita dal docente.
   let publicClassId = ALL_ACTIVE_CLASSES;
   async function loadPublicData(){
-    if(!supabase) return;
+    publicDataStatus = 'loading';
+    if(!supabase){
+      publicDataStatus = 'error';
+      renderPublicClassSelector();
+      $('rankingLead').textContent = 'Connessione al database non disponibile. Riprova più tardi.';
+      return;
+    }
+    renderPublicClassSelector();
     try {
       const [{ data: classes, error: classError }, { data: scores, error: scoreError }] = await Promise.all([
         supabase.rpc('get_public_active_classes'),
@@ -1172,9 +1181,12 @@ input, select, .authbox input {
       }
       state = normalizeState({ classes: mappedClasses, activeClassId: mappedClasses[0]?.id || null, nextClassId: mappedClasses.length + 1 });
       publicClassId = ALL_ACTIVE_CLASSES;
+      publicDataStatus = 'loaded';
       render();
     } catch(err) {
       console.error('Errore caricamento dati pubblici Supabase:', err);
+      publicDataStatus = 'error';
+      renderPublicClassSelector();
       $('rankingLead').textContent = 'Non è stato possibile caricare i punteggi dal database. Riprova più tardi.';
     }
   }
@@ -1201,6 +1213,13 @@ input, select, .authbox input {
   function renderPublicClassSelector(){
     const select = $('publicClassSelect');
     if(!select) return;
+    if(publicDataStatus !== 'loaded') {
+      select.innerHTML = publicDataStatus === 'error'
+        ? '<option disabled selected>Impossibile caricare le classi</option>'
+        : '<option disabled selected>✨ Caricamento magia</option>';
+      select.disabled = true;
+      return;
+    }
     const available = state.classes.filter(c => !c.archived).slice().sort(compareClasses);
     const selected = publicClass();
     select.innerHTML = available.length
