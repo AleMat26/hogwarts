@@ -1026,6 +1026,8 @@ input, select, .authbox input {
   let remoteSyncRunning = false;
   let remoteSyncTimer = null;
   let lastRemoteSyncError = null;
+  // Fotografia dell’ultimo stato confermato su Supabase: permette di inviare solo differenze.
+  let lastSyncedClasses = null;
   let publicScores = null;
   const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
@@ -1712,26 +1714,52 @@ input, select, .authbox input {
         if(localImportError && typeof localImportError.message === 'string' && (localImportError.message.startsWith('Importazione iniziale dei dati locali non riuscita') || localImportError.message.startsWith('Importazione iniziale annullata'))) throw localImportError;
       }
     }
-    const classes = [];
-    for(const rc of (remoteClasses || [])){
-      const { data: remoteStudents, error: studentError } = await supabase.from('students').select('id,client_id,name,house_id,points,created_at').eq('class_id', rc.id).order('created_at');
-      if(studentError) throw studentError;
-      const students = [];
-      for(const rs of (remoteStudents || [])){
-        const { data: remoteHistory, error: historyError } = await supabase.from('grades').select('id,history_id,grade,points,entry_type,created_at').eq('student_id', rs.id).order('created_at');
-        if(historyError) throw historyError;
-        const history = (remoteHistory || []).map(h => ({
-          id: h.history_id || String(h.id), date: h.created_at,
-          grade: h.entry_type === 'encomio' ? 'Encomio speciale' : h.entry_type === 'malus' ? 'Malus' : h.grade,
-          points: Number(h.points) || 0, dbId: h.id
-        }));
-        students.push({ id: rs.client_id || String(rs.id), dbId: String(rs.id), clientId: rs.client_id || String(rs.id), name: rs.name, house: ['g','t','r','s'].includes(rs.house_id) ? rs.house_id : null, points: Number(rs.points) || 0, history });
-      }
-      classes.push({ id: rc.client_id || String(rc.id), dbId: String(rc.id), clientId: rc.client_id || String(rc.id), name: rc.name, schoolYear: rc.school_year || DEFAULT_YEAR, students, nextId: Math.max(0,...students.map(st => Number(st.id)||0))+1, archived: Boolean(rc.archived), resetForDeletion: Boolean(rc.reset_for_deletion) });
+    // Caricamento in blocco: 3 richieste complessive (classi, studenti, storico),
+    // invece di una richiesta per ogni classe e per ogni studente.
+    const classRows = remoteClasses || [];
+    const classIds = classRows.map(c => c.id);
+    let studentRows = [];
+    if(classIds.length){
+      const { data, error } = await supabase.from('students').select('id,class_id,client_id,name,house_id,points,created_at').in('class_id', classIds).order('created_at');
+      if(error) throw error;
+      studentRows = data || [];
     }
+    const studentIds = studentRows.map(s => s.id);
+    let gradeRows = [];
+    if(studentIds.length){
+      const { data, error } = await supabase.from('grades').select('id,student_id,history_id,grade,points,entry_type,created_at').in('student_id', studentIds).order('created_at');
+      if(error) throw error;
+      gradeRows = data || [];
+    }
+    const gradesByStudent = new Map();
+    for(const h of gradeRows){
+      if(!gradesByStudent.has(String(h.student_id))) gradesByStudent.set(String(h.student_id), []);
+      gradesByStudent.get(String(h.student_id)).push({
+        id: h.history_id || String(h.id), date: h.created_at,
+        grade: h.entry_type === 'encomio' ? 'Encomio speciale' : h.entry_type === 'malus' ? 'Malus' : h.grade,
+        points: Number(h.points) || 0, dbId: h.id
+      });
+    }
+    const studentsByClass = new Map();
+    for(const rs of studentRows){
+      if(!studentsByClass.has(String(rs.class_id))) studentsByClass.set(String(rs.class_id), []);
+      studentsByClass.get(String(rs.class_id)).push({
+        id: rs.client_id || String(rs.id), dbId: String(rs.id), clientId: rs.client_id || String(rs.id),
+        name: rs.name, house: ['g','t','r','s'].includes(rs.house_id) ? rs.house_id : null,
+        points: Number(rs.points) || 0, history: gradesByStudent.get(String(rs.id)) || []
+      });
+    }
+    const classes = classRows.map(rc => {
+      const students = studentsByClass.get(String(rc.id)) || [];
+      return { id: rc.client_id || String(rc.id), dbId: String(rc.id), clientId: rc.client_id || String(rc.id),
+        name: rc.name, schoolYear: rc.school_year || DEFAULT_YEAR, students,
+        nextId: Math.max(0,...students.map(st => Number(st.id)||0))+1,
+        archived: Boolean(rc.archived), resetForDeletion: Boolean(rc.reset_for_deletion) };
+    });
     const active = classes.find(c => !c.archived) || classes[0] || null;
     state = normalizeState({ classes, activeClassId: active?.id || null, nextClassId: classes.length + 1 });
     if(!state.classes.length){ state.className = 'Castello'; state.students = []; state.activeClassId = null; }
+    lastSyncedClasses = JSON.parse(JSON.stringify(state.classes));
     saveLocalOnly();
     render();
   }
@@ -1774,7 +1802,7 @@ input, select, .authbox input {
       }, 35);
     });
   }
-  async function syncTeacherData(){
+  async function syncTeacherDataFull(){
     if(!supabase || !supabaseUser) return;
     const { data: currentClasses, error: readClassesError } = await supabase.from('classes').select('id,client_id').eq('teacher_id', supabaseUser.id);
     if(readClassesError) throw readClassesError;
@@ -1837,6 +1865,114 @@ input, select, .authbox input {
     }
     const staleClasses = (currentClasses || []).filter(c => !retainedClassIds.has(String(c.id))).map(c => c.id);
     if(staleClasses.length){ const { error } = await supabase.from('classes').delete().in('id', staleClasses); if(error) throw error; }
+  }
+
+  const stableJson = value => JSON.stringify(value);
+  const cloneClasses = () => JSON.parse(JSON.stringify(state.classes || []));
+  const classClientKey = c => String(c.clientId || c.id);
+  const studentClientKey = st => String(st.clientId || st.id);
+  const historyClientKey = h => String(h.id);
+  const historyPayload = h => ({ grade: h.grade === 'Encomio speciale' || h.grade === 'Malus' ? null : (Number.isFinite(Number(h.grade)) ? Number(h.grade) : null), points: Number(h.points) || 0, entry_type: h.grade === 'Encomio speciale' ? 'encomio' : h.grade === 'Malus' ? 'malus' : 'voto' });
+  const sameClassFields = (a,b) => a && b && a.name === b.name && (a.schoolYear || DEFAULT_YEAR) === (b.schoolYear || DEFAULT_YEAR) && Boolean(a.archived) === Boolean(b.archived) && Boolean(a.resetForDeletion) === Boolean(b.resetForDeletion);
+  const sameStudentFields = (a,b) => a && b && a.name === b.name && (a.house || null) === (b.house || null) && (Number(a.points)||0) === (Number(b.points)||0);
+  const sameHistoryFields = (a,b) => a && b && stableJson(historyPayload(a)) === stableJson(historyPayload(b));
+
+  async function syncTeacherData(){
+    if(!supabase || !supabaseUser) return;
+    // Primo accesso/importazione: esegui la riconciliazione completa una sola volta.
+    if(lastSyncedClasses === null){
+      await syncTeacherDataFull();
+      lastSyncedClasses = cloneClasses();
+      return;
+    }
+    // Lavora su uno snapshot: eventuali modifiche fatte mentre la rete risponde
+    // verranno rilevate dal successivo passaggio della coda.
+    const snapshot = cloneClasses();
+    const baseline = lastSyncedClasses || [];
+    const oldClassMap = new Map(baseline.map(c => [classClientKey(c), c]));
+    const currentClassMap = new Map(snapshot.map(c => [classClientKey(c), c]));
+    const oldClassIds = new Set();
+
+    // Inserisce/aggiorna solo classi nuove o con campi modificati.
+    for(const c of snapshot){
+      const key = classClientKey(c), old = oldClassMap.get(key);
+      const payload = { teacher_id: supabaseUser.id, client_id: key, name: c.name, school_year: c.schoolYear || DEFAULT_YEAR, archived: Boolean(c.archived), reset_for_deletion: Boolean(c.resetForDeletion) };
+      if(!c.dbId){
+        const { data, error } = await supabase.from('classes').insert(payload).select('id').single();
+        if(error) throw error;
+        c.dbId = String(data.id);
+        const liveClass = (state.classes || []).find(x => classClientKey(x) === key); if(liveClass) liveClass.dbId = c.dbId;
+      } else if(!sameClassFields(c, old)){
+        const { error } = await supabase.from('classes').update(payload).eq('id', c.dbId);
+        if(error) throw error;
+      }
+      if(c.dbId) oldClassIds.add(String(c.dbId));
+      const oldStudents = old?.students || [];
+      const oldStudentMap = new Map(oldStudents.map(st => [studentClientKey(st), st]));
+      const currentStudentMap = new Map((c.students || []).map(st => [studentClientKey(st), st]));
+
+      for(const st of (c.students || [])){
+        const skey = studentClientKey(st), oldSt = oldStudentMap.get(skey);
+        const studentPayload = { class_id: c.dbId, client_id: skey, name: st.name, house_id: st.house || null, points: Number(st.points) || 0 };
+        if(!st.dbId){
+          const { data, error } = await supabase.from('students').insert(studentPayload).select('id').single();
+          if(error) throw error;
+          st.dbId = String(data.id);
+          const liveClass = (state.classes || []).find(x => classClientKey(x) === key); const liveStudent = liveClass && (liveClass.students || []).find(x => studentClientKey(x) === skey); if(liveStudent) liveStudent.dbId = st.dbId;
+        } else if(!sameStudentFields(st, oldSt) || String(oldSt?.dbId || '') !== String(st.dbId || '')){
+          const { error } = await supabase.from('students').update(studentPayload).eq('id', st.dbId);
+          if(error) throw error;
+        }
+        const oldHistory = oldSt?.history || [];
+        const oldHistoryMap = new Map(oldHistory.map(h => [historyClientKey(h), h]));
+        const currentHistoryMap = new Map((st.history || []).map(h => [historyClientKey(h), h]));
+        for(const h of (st.history || [])){
+          const hkey = historyClientKey(h), oldH = oldHistoryMap.get(hkey), hp = historyPayload(h);
+          const gradePayload = { student_id: st.dbId, history_id: hkey, grade: hp.grade, points: hp.points, entry_type: hp.entry_type };
+          if(!h.dbId){
+            const { data, error } = await supabase.from('grades').insert(gradePayload).select('id').single();
+            if(error) throw error;
+            h.dbId = String(data.id);
+            const liveClass = (state.classes || []).find(x => classClientKey(x) === key); const liveStudent = liveClass && (liveClass.students || []).find(x => studentClientKey(x) === skey); const liveEntry = liveStudent && (liveStudent.history || []).find(x => historyClientKey(x) === hkey); if(liveEntry) liveEntry.dbId = h.dbId;
+          } else if(!sameHistoryFields(h, oldH)){
+            const { error } = await supabase.from('grades').update(gradePayload).eq('id', h.dbId);
+            if(error) throw error;
+          }
+        }
+        // Elimina solo le voci di storico rimosse per questo studente.
+        const removedGrades = oldHistory.filter(h => !currentHistoryMap.has(historyClientKey(h)) && h.dbId).map(h => h.dbId);
+        if(removedGrades.length){ const { error } = await supabase.from('grades').delete().in('id', removedGrades); if(error) throw error; }
+      }
+      // Elimina solo gli studenti rimossi e il loro storico associato.
+      for(const oldSt of oldStudents.filter(st => !currentStudentMap.has(studentClientKey(st)))){
+        const gradeIds = (oldSt.history || []).map(h => h.dbId).filter(Boolean);
+        if(gradeIds.length){ const { error } = await supabase.from('grades').delete().in('id', gradeIds); if(error) throw error; }
+        if(oldSt.dbId){ const { error } = await supabase.from('students').delete().eq('id', oldSt.dbId); if(error) throw error; }
+      }
+    }
+    // Le classi eliminate vengono rimosse esplicitamente insieme ai relativi dati.
+    for(const oldC of baseline.filter(c => !currentClassMap.has(classClientKey(c)))){
+      for(const oldSt of (oldC.students || [])){
+        const gradeIds = (oldSt.history || []).map(h => h.dbId).filter(Boolean);
+        if(gradeIds.length){ const { error } = await supabase.from('grades').delete().in('id', gradeIds); if(error) throw error; }
+        if(oldSt.dbId){ const { error } = await supabase.from('students').delete().eq('id', oldSt.dbId); if(error) throw error; }
+      }
+      if(oldC.dbId){ const { error } = await supabase.from('classes').delete().eq('id', oldC.dbId); if(error) throw error; }
+    }
+    // Riporta nel modello live gli ID generati per i nuovi record e conserva lo snapshot sincronizzato.
+    const liveClasses = new Map((state.classes || []).map(c => [classClientKey(c), c]));
+    for(const c of snapshot){
+      const live = liveClasses.get(classClientKey(c)); if(!live) continue;
+      live.dbId = c.dbId;
+      const liveStudents = new Map((live.students || []).map(st => [studentClientKey(st), st]));
+      for(const st of (c.students || [])){
+        const liveSt = liveStudents.get(studentClientKey(st)); if(!liveSt) continue;
+        liveSt.dbId = st.dbId;
+        const liveHistory = new Map((liveSt.history || []).map(h => [historyClientKey(h), h]));
+        for(const h of (st.history || [])){ const liveH = liveHistory.get(historyClientKey(h)); if(liveH) liveH.dbId = h.dbId; }
+      }
+    }
+    lastSyncedClasses = snapshot;
   }
 
   // Genera identificativi locali realmente univoci anche se alcune classi sono state eliminate.
