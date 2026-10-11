@@ -2168,9 +2168,16 @@ input, select, .authbox input {
     render();
   };
 
-  // Le schede operative si aprono sotto ai pulsanti senza spostare la pagina.
-  // La scheda selezionata resta aperta anche se si riclicca sul suo pulsante.
+  // La scheda Gestisci studenti si apre e si chiude dal suo pulsante.
+  // Ogni chiusura riporta ricerche e filtri alla configurazione iniziale.
   $('manageBtn').onclick = () => {
+    const isOpen = $('classCard').style.display !== 'none';
+    if(isOpen) {
+      $('classCard').style.display = 'none';
+      resetClassStudentSearch();
+      $('manageBtn').classList.remove('primary');
+      return;
+    }
     resetClassStudentSearch();
     selectedHouse = null;
     $('houseStudentsPanel').style.display = 'none';
