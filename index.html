@@ -834,6 +834,10 @@ input, select, .authbox input {
 }
 #castleStudentSearchInput::placeholder { opacity: 1; }
 
+
+.house-student-clickable { cursor: pointer; }
+.house-student-clickable:hover, .house-student-clickable:focus-visible { outline: 1px solid var(--gold); background: rgba(226,194,122,.09); }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -1396,11 +1400,11 @@ input, select, .authbox input {
       orderedClasses.forEach(c => {
         c.students.filter(st => st.house === selectedHouse && st.name.toLocaleLowerCase('it').includes(query))
           .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'))
-          .forEach(st => members.push({ ...st, className: c.name }));
+          .forEach(st => members.push({ ...st, className: c.name, classId: c.id }));
       });
       $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + ' · Castello';
       $('houseStudentsList').innerHTML = members.map(st =>
-        `<div class="house-student-line"><b>${esc(st.name)}</b><span>${esc(st.className)}</span></div>`
+        `<div class="house-student-line house-student-clickable" role="button" tabindex="0" data-house-student="${esc(st.id)}" data-house-class="${esc(st.classId)}" aria-label="Apri i punteggi di ${esc(st.name)} nella classe ${esc(st.className)}"><b>${esc(st.name)}</b><span>${esc(st.className)}</span></div>`
       ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata nelle classi attive.'}</div>`;
     } else {
       const shownClass = activeClass();
@@ -1409,10 +1413,32 @@ input, select, .authbox input {
         .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
       $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + (shownClass ? ' · ' + shownClass.name : '');
       $('houseStudentsList').innerHTML = members.map(st =>
-        `<div class="house-student-line"><b>${esc(st.name)}</b><span>${pointLabel(st.points || 0)}</span></div>`
+        `<div class="house-student-line house-student-clickable" role="button" tabindex="0" data-house-student="${esc(st.id)}" data-house-class="${esc(shownClass ? shownClass.id : '')}" aria-label="Apri i punteggi di ${esc(st.name)}"><b>${esc(st.name)}</b><span>${pointLabel(st.points || 0)}</span></div>`
       ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
     }
     $('houseStudentsPanel').style.display = 'block';
+  }
+
+  function openStudentPoints(studentId){
+    const st = state.students.find(x => String(x.id) === String(studentId));
+    if(!st) return;
+    teacherView = 'class';
+    resetPointsSelection = false;
+    selectedHouse = null;
+    $('houseStudentsPanel').style.display = 'none';
+    $('castleViewBtn').style.display = 'inline-block';
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'block';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.add('primary');
+    $('gradeInput').value = '';
+    $('pointPreview').textContent = 'Inserisci un voto da 1 a 10';
+    render();
+    const studentSelect = $('pointsStudent');
+    const targetId = String(st.id);
+    if([...studentSelect.options].some(option => option.value === targetId)) studentSelect.value = targetId;
+    history();
+    $('gradeInput').focus({ preventScroll: true });
   }
 
   function renderTeacher(){
@@ -2092,6 +2118,29 @@ input, select, .authbox input {
   $('studentSearch').addEventListener('input', renderTeacher);
   $('houseFilter').addEventListener('change', renderTeacher);
   $('houseSearch').addEventListener('input', renderHouseStudents);
+  $('houseStudentsList').addEventListener('click', e => {
+    const row = e.target.closest('[data-house-student]');
+    if(!row) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const classId = row.dataset.houseClass;
+    const studentId = row.dataset.houseStudent;
+    if(teacherView === 'castle' && String(state.activeClassId) !== String(classId)) {
+      switchClass(classId);
+    }
+    openStudentPoints(studentId);
+  });
+  $('houseStudentsList').addEventListener('keydown', e => {
+    if(e.key !== 'Enter' && e.key !== ' ') return;
+    const row = e.target.closest('[data-house-student]');
+    if(!row) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const classId = row.dataset.houseClass;
+    const studentId = row.dataset.houseStudent;
+    if(teacherView === 'castle' && String(state.activeClassId) !== String(classId)) switchClass(classId);
+    openStudentPoints(studentId);
+  });
   $('commendBtn').onclick = () => {
     const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
     if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
