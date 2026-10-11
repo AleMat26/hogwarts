@@ -211,7 +211,9 @@ main {
 .castle-student-search-empty { color:var(--muted); font:14px/1.5 system-ui,sans-serif; padding:8px 2px; }
 #castleClassScores { margin-top:22px; }
 .castle-class-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
-.castle-class-card { padding:13px 14px; border:1px solid rgba(226,194,122,.28); border-radius:13px; background:linear-gradient(145deg,rgba(35,42,57,.94),rgba(20,25,37,.96)); }
+.castle-class-card { display:block; width:100%; box-sizing:border-box; padding:13px 14px; border:1px solid rgba(226,194,122,.28); border-radius:13px; background:linear-gradient(145deg,rgba(35,42,57,.94),rgba(20,25,37,.96)); color:inherit; text-align:left; cursor:pointer; font:inherit; transition:border-color .16s ease,background .16s ease,transform .16s ease; }
+.castle-class-card:hover,.castle-class-card:focus-visible { border-color:var(--gold); background:linear-gradient(145deg,rgba(48,54,68,.98),rgba(27,32,44,.98)); outline:none; }
+.castle-class-card:hover { transform:translateY(-1px); }
 .castle-class-title { margin:0 0 9px; color:var(--gold-soft); font:700 15px/1.35 system-ui,sans-serif; }
 .castle-class-scores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
 .castle-class-score { display:flex; justify-content:space-between; align-items:center; gap:7px; padding:7px 8px; border-radius:7px; background:#ffffff08; font:12px system-ui,sans-serif; }
@@ -1382,7 +1384,7 @@ input, select, .authbox input {
       const t = totals(c.students);
       const max = Math.max(...Object.values(t));
       const order = Object.entries(t).sort((a,b) => b[1]-a[1] || a[0].localeCompare(b[0]));
-      return `<article class="castle-class-card"><h4 class="castle-class-title">${esc(c.name)} <span style="color:var(--muted);font-weight:400">· ${esc(c.schoolYear)}</span></h4><div class="castle-class-scores">${order.map(([key,value]) => `<div class="castle-class-score house-score-${key} ${max > 0 && value === max ? 'is-leading' : ''}"><span>${houses[key]}</span><b>${formatPoints(value)} pt</b></div>`).join('')}</div></article>`;
+      return `<button type="button" class="castle-class-card" data-castle-class="${esc(c.id)}" aria-label="Apri la classe ${esc(c.name)} · ${esc(c.schoolYear)}"><h4 class="castle-class-title">${esc(c.name)} <span style="color:var(--muted);font-weight:400">· ${esc(c.schoolYear)}</span></h4><div class="castle-class-scores">${order.map(([key,value]) => `<div class="castle-class-score house-score-${key} ${max > 0 && value === max ? 'is-leading' : ''}"><span>${houses[key]}</span><b>${formatPoints(value)} pt</b></div>`).join('')}</div></button>`;
     }).join('');
   }
 
@@ -1537,6 +1539,11 @@ input, select, .authbox input {
 
   // Event Listeners
   $('castleStudentSearchInput').addEventListener('input', renderCastleStudentSearch);
+  $('castleClassGrid').addEventListener('click', e => {
+    const card = e.target.closest('[data-castle-class]');
+    if(!card) return;
+    switchClass(card.dataset.castleClass);
+  });
   $('castleStudentSearchResults').addEventListener('click', e => {
     const result = e.target.closest('[data-student-class]');
     if(!result) return;
