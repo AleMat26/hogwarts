@@ -1278,6 +1278,10 @@ input, select, .authbox input {
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
     $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera';
+    const resetAlreadyDone = role === 'teacher' && teacherView === 'castle'
+      ? !state.classes.length || state.classes.every(cl => cl.resetForDeletion)
+      : !c || activeIsArchived() || Boolean(c.resetForDeletion);
+    $('resetBtn').disabled = resetAlreadyDone || role !== 'teacher';
     $('sortBtn').disabled = (role === 'teacher' && teacherView === 'castle') || activeIsArchived() || !state.students.length || state.students.every(st => st.house);
   }
 
@@ -1517,7 +1521,10 @@ input, select, .authbox input {
     $('saveGrade').disabled = readOnly;
     $('commendBtn').disabled = readOnly;
     $('malusBtn').disabled = readOnly;
-    $('resetBtn').disabled = role === 'teacher' && teacherView === 'castle' ? !state.classes.length : readOnly;
+    const resetAlreadyDone = role === 'teacher' && teacherView === 'castle'
+      ? !state.classes.length || state.classes.every(cl => cl.resetForDeletion)
+      : !teacherClass || readOnly || Boolean(teacherClass.resetForDeletion);
+    $('resetBtn').disabled = resetAlreadyDone || role !== 'teacher';
     $('classList').querySelectorAll('button').forEach(button => button.disabled = readOnly);
     history();
   }
