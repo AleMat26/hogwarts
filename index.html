@@ -214,6 +214,7 @@ main {
 .castle-class-card { display:block; width:100%; box-sizing:border-box; padding:13px 14px; border:1px solid rgba(226,194,122,.28); border-radius:13px; background:linear-gradient(145deg,rgba(35,42,57,.94),rgba(20,25,37,.96)); color:inherit; text-align:left; cursor:pointer; font:inherit; transition:border-color .16s ease,background .16s ease,transform .16s ease; }
 .castle-class-card:hover,.castle-class-card:focus-visible { border-color:var(--gold); background:linear-gradient(145deg,rgba(48,54,68,.98),rgba(27,32,44,.98)); outline:none; }
 .castle-class-card:hover { transform:translateY(-1px); }
+.castle-class-card:active { transform:translateY(0); }
 .castle-class-title { margin:0 0 9px; color:var(--gold-soft); font:700 15px/1.35 system-ui,sans-serif; }
 .castle-class-scores { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px; }
 .castle-class-score { display:flex; justify-content:space-between; align-items:center; gap:7px; padding:7px 8px; border-radius:7px; background:#ffffff08; font:12px system-ui,sans-serif; }
@@ -1834,8 +1835,13 @@ input, select, .authbox input {
   }
 
   function switchClass(classId){
-    const target = state.classes.find(c => c.id === String(classId));
-    if(!target) return;
+    // Gli ID possono arrivare dal DOM come stringhe anche quando nello stato
+    // sono numeri: confrontiamo sempre la rappresentazione testuale.
+    const target = state.classes.find(c => String(c.id) === String(classId));
+    if(!target) {
+      console.warn('Classe non trovata per la selezione dal Castello:', classId);
+      return;
+    }
     if(role === 'teacher') teacherView = 'class';
     resetPointsSelection = true;
     save();
