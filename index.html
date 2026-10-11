@@ -1519,6 +1519,7 @@ input, select, .authbox input {
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherWorkControls').style.display = isTeacher ? 'flex' : 'none';
     $('teacherMode').style.display = isTeacher ? 'none' : 'inline-block';
+    $('teacherMode').disabled = false;
     $('accessSection').style.display = isTeacher ? 'none' : 'block';
     $('classManager').style.display = isTeacher ? 'block' : 'none';
     $('publicClassPicker').style.display = isTeacher ? 'none' : 'block';
@@ -1601,8 +1602,9 @@ input, select, .authbox input {
   };
 
   $('teacherMode').onclick = () => {
-    if(role !== 'teacher'){
+    if(role !== 'teacher' && $('authBox').style.display !== 'grid'){
       $('authBox').style.display = 'grid';
+      $('teacherMode').disabled = true;
       $('email').focus();
     }
   };
