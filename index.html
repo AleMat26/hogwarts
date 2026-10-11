@@ -1273,11 +1273,12 @@ input, select, .authbox input {
     }
     const finalYear = c ? isFinalYearClass(c.name) : false;
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
-    $('promoteClassBtn').disabled = !c || activeIsArchived() || (role === 'teacher' && teacherView === 'castle');
-    $('promoteClassBtn').title = !c ? 'Crea prima una classe.' : activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
+    const canPromoteCurrentClass = role === 'teacher' && teacherView === 'class' && Boolean(c) && !Boolean(c.archived);
+    $('promoteClassBtn').disabled = !canPromoteCurrentClass;
+    $('promoteClassBtn').title = !c ? 'Seleziona una classe da gestire.' : teacherView === 'castle' ? 'Seleziona una classe per promuoverla.' : c.archived ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Dopo l’Esame di Stato, archivia la classe quinta senza creare una classe successiva.' : 'Crea la classe dell’anno successivo conservando le Casate.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
-    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera punteggi';
+    $('resetBtn').textContent = role === 'teacher' && teacherView === 'castle' ? '↺ Azzera tutte le classi' : '↺ Azzera la classe';
     const resetAlreadyDone = role === 'teacher' && teacherView === 'castle'
       ? !state.classes.length || state.classes.every(cl => cl.resetForDeletion)
       : !c || activeIsArchived() || Boolean(c.resetForDeletion);
@@ -2122,8 +2123,10 @@ input, select, .authbox input {
   };
 
   $('promoteClassBtn').onclick = () => {
-    if(activeIsArchived()){ alert('Seleziona una classe attiva da promuovere.'); return; }
+    if(role !== 'teacher' || teacherView !== 'class') { showToast('Seleziona una classe dalla modalità docente.'); return; }
     const current = activeClass();
+    if(!current) { showToast('Seleziona una classe da gestire.'); return; }
+    if(current.archived){ alert('La classe archiviata è in sola consultazione. Seleziona una classe attiva.'); return; }
     if(isFinalYearClass(current.name)){
       const confirmation = 'Vuoi concludere il percorso della classe ' + current.name + ' · ' + current.schoolYear + '?\n\nLa classe sarà archiviata in sola consultazione. Studenti, Casate, punteggi e storico saranno conservati nell’archivio. Non verrà creata una classe successiva.';
       if(!confirm(confirmation)) return;
