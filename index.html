@@ -822,6 +822,18 @@ input, select, .authbox input {
   #classManager select { min-width:0; }
 }
 
+
+/* Campo ricerca studenti nel Castello docente: maggiore leggibilità */
+#castleStudentSearchInput {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  padding: 12px 15px;
+  font-size: 1.05rem;
+  line-height: 1.35;
+}
+#castleStudentSearchInput::placeholder { opacity: 1; }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -918,7 +930,7 @@ input, select, .authbox input {
   <!-- RICERCA STUDENTE, VISIBILE SOLO NEL CASTELLO DOCENTE -->
   <section class="card" id="castleStudentSearch" style="display:none">
     <h3>🔎 Cerca uno studente</h3>
-    <input id="castleStudentSearchInput" type="search" placeholder="Scrivi il nome o il cognome dello studente…" aria-label="Cerca uno studente in tutte le classi" autocomplete="off">
+    <input id="castleStudentSearchInput" type="search" placeholder="Scrivi il nome o il cognome" aria-label="Cerca uno studente in tutte le classi" autocomplete="off">
     <div id="castleStudentSearchResults" class="castle-student-search-results" aria-live="polite">
       <div class="castle-student-search-empty">Digita un nome per cercare uno studente in tutte le classi.</div>
     </div>
@@ -1259,7 +1271,7 @@ input, select, .authbox input {
     const t = totals(displayedStudents);
     Object.keys(t).forEach(k => {
       const el = document.querySelector(`[data-house="${k}"]`);
-      if(el) el.textContent = formatPoints(t[k]) + ' punti';
+      if(el) el.textContent = pointLabel(t[k]);
       const card = document.querySelector(`[data-house-card="${k}"]`);
       if(card){
         const highest = Math.max(...Object.values(t));
@@ -1271,7 +1283,7 @@ input, select, .authbox input {
         if(role !== 'teacher') { if(stats) stats.remove(); }
         else {
           if(!stats){ stats = document.createElement('div'); stats.className = 'house-stats'; card.appendChild(stats); }
-          stats.innerHTML = `<div>Studenti: <b>${members.length}</b></div><div>Media: <b>${formatPoints(avg)} punti</b></div><div>In testa: <b>${best ? esc(best.name) + ' (' + formatPoints(best.points || 0) + ')' : '—'}</b></div>`;
+          stats.innerHTML = `<div>Studenti: <b>${members.length}</b></div><div>Media: <b>${pointLabel(avg)}</b></div><div>In testa: <b>${best ? esc(best.name) + ' (' + formatPoints(best.points || 0) + ')' : '—'}</b></div>`;
         }
       }
     });
@@ -1284,13 +1296,13 @@ input, select, .authbox input {
       : lead[1] === 0
         ? (showingAggregate ? 'Il Castello si anima quando le Casate iniziano a conquistare punti.' : 'La Coppa di ' + (displayedClass ? displayedClass.name : 'questa classe') + ' si accende quando le Casate iniziano a conquistare punti.')
         : leaders.length > 1 ? 'Parità in testa: ' + leaders.map(([k]) => houses[k]).join(' e ') + '!'
-        : 'In testa: ' + houses[lead[0]] + ' · ' + formatPoints(lead[1]) + ' punti';
+        : 'In testa: ' + houses[lead[0]] + ' · ' + pointLabel(lead[1]);
     $('ranking').querySelector('h3').textContent = '🏆 Coppa delle Case' + (showingAggregate ? ' · Castello' : displayedClass ? ' · ' + displayedClass.name : '');
     $('rankingList').innerHTML = ranking.map(([k,v],i) => {
       const gap = i === 0 ? null : v - ranking[i-1][1];
       const tied = i > 0 && v === ranking[i-1][1];
       const detail = i === 0 ? (leaders.length > 1 ? '🏆 In testa a pari merito' : '🏆 In testa') : (tied ? 'A pari punti' : 'Distacco: ' + formatPoints(Math.abs(gap)) + ' pt');
-      return `<div class="ranking-row ${v === lead[1] && lead[1] > 0 ? 'leader' : ''} ${leaders.length > 1 && v === lead[1] ? 'tied-leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${formatPoints(v)} punti</b><span class="ranking-detail">${detail}</span></div>`;
+      return `<div class="ranking-row ${v === lead[1] && lead[1] > 0 ? 'leader' : ''} ${leaders.length > 1 && v === lead[1] ? 'tied-leader' : ''}"><span>${i+1}. ${houses[k]}</span><b>${pointLabel(v)}</b><span class="ranking-detail">${detail}</span></div>`;
     }).join('');
 
     renderCastleStudentSearch();
@@ -1320,6 +1332,7 @@ input, select, .authbox input {
   }
 
   const formatPoints = n => Number((Number(n) || 0).toFixed(2)).toLocaleString('it-IT', { maximumFractionDigits: 2 });
+  const pointLabel = n => formatPoints(n) + (Math.abs(Number(n) || 0) === 1 ? ' punto' : ' punti');
 
   function renderCastleStudentSearch(){
     const input = $('castleStudentSearchInput');
@@ -1348,7 +1361,7 @@ input, select, .authbox input {
       const house = st.house && houses[st.house] ? houses[st.house] : 'Da smistare';
       return `<button type="button" class="castle-student-result" data-student-class="${esc(item.classId)}" aria-label="Apri la classe ${esc(item.className)} per ${esc(st.name)}">
         <span><strong>${esc(st.name)}</strong><br><span class="student-result-meta">${esc(house)} · ${esc(item.className)} · ${esc(item.schoolYear || '')}${item.archived ? ' · Archivio' : ''}</span></span>
-        <span class="student-result-points">${formatPoints(st.points || 0)} punti</span>
+        <span class="student-result-points">${pointLabel(st.points || 0)}</span>
       </button>`;
     }).join('') + (matches.length > 50 ? '<div class="castle-student-search-empty">Sono mostrati i primi 50 risultati. Aggiungi altre lettere per restringere la ricerca.</div>' : '');
   }
@@ -1396,7 +1409,7 @@ input, select, .authbox input {
         .slice().sort((a,b) => a.name.localeCompare(b.name, 'it'));
       $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + (shownClass ? ' · ' + shownClass.name : '');
       $('houseStudentsList').innerHTML = members.map(st =>
-        `<div class="house-student-line"><b>${esc(st.name)}</b><span>${formatPoints(st.points || 0)} punti</span></div>`
+        `<div class="house-student-line"><b>${esc(st.name)}</b><span>${pointLabel(st.points || 0)}</span></div>`
       ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
     }
     $('houseStudentsPanel').style.display = 'block';
@@ -1451,7 +1464,7 @@ input, select, .authbox input {
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
       ((s.history || []).slice().reverse().map(h => 
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>${esc(h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(h.points)} punti</span>
+          <span>${esc(h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(pointLabel(h.points))}</span>
           <button type="button" class="del" data-id="${esc(h.id)}" title="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
         </div>`
       ).join('') || '<div>Nessun voto registrato.</div>') : '';
@@ -2483,7 +2496,7 @@ input, select, .authbox input {
   $('gradeInput').oninput = () => {
     let v = parseFloat($('gradeInput').value);
     $('pointPreview').textContent = Number.isFinite(v) && v >= 1 && v <= 10 ?
-      'Voto ' + v + ' → ' + (score(v) >= 0 ? '+' : '') + score(v) + ' punti' :
+      'Voto ' + v + ' → ' + (score(v) >= 0 ? '+' : '') + pointLabel(score(v)) :
       'Inserisci un voto da 1 a 10';
   };
 
@@ -2506,7 +2519,7 @@ input, select, .authbox input {
     render();
     $('pointsStudent').value = studentId;
     history();
-    showToast('Voto registrato per ' + s.name + ': ' + (p >= 0 ? '+' : '') + formatPoints(p) + ' punti.');
+    showToast('Voto registrato per ' + s.name + ': ' + (p >= 0 ? '+' : '') + pointLabel(p) + '.');
   };
 
   $('saveGrade').onclick = saveGradeAction;
