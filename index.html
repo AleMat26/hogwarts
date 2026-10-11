@@ -1474,6 +1474,9 @@ input, select, .authbox input {
     selectedHouse = null;
     $('houseStudentsPanel').style.display = 'none';
     document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
+    // Aggiorna anche l'elenco già renderizzato: azzerare i filtri da solo
+    // non basta a ripristinare gli studenti che erano stati nascosti.
+    if(role === 'teacher' && teacherView === 'class') renderTeacher();
   }
 
   function renderTeacher(){
