@@ -1725,7 +1725,16 @@ input, select, .authbox input {
       try {
         const localRaw = JSON.parse(localStorage.getItem(KEY) || 'null');
         const localCandidate = localRaw ? normalizeState(localRaw) : null;
-        if(localCandidate && localCandidate.classes.length){
+        // La vecchia migrazione può lasciare nel browser una sola II H vuota,
+        // creata come classe predefinita anche quando non esistono più dati.
+        // Non consideriamo questa classe fantasma un backup da importare.
+        const onlyEmptyDefaultClass = Boolean(localCandidate
+          && localCandidate.classes.length === 1
+          && localCandidate.classes[0].name === 'II H'
+          && !(localCandidate.classes[0].students || []).length
+          && !localCandidate.classes[0].archived
+          && !localCandidate.classes[0].resetForDeletion);
+        if(localCandidate && localCandidate.classes.length && !onlyEmptyDefaultClass){
           const importLocal = confirm('Il database Supabase è vuoto, ma questo browser contiene ' + localCandidate.classes.length + ' classi locali. Vuoi importarle nel database per renderle disponibili anche sugli altri dispositivi?');
           if(!importLocal){
             // Annullare non deve significare caricare lo stato remoto vuoto e cancellare la copia locale.
