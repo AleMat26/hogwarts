@@ -1216,7 +1216,7 @@ input, select, .authbox input {
     if(publicDataStatus !== 'loaded') {
       select.innerHTML = publicDataStatus === 'error'
         ? '<option disabled selected>Impossibile caricare le classi</option>'
-        : '<option disabled selected>✨ Caricamento magia</option>';
+        : '<option disabled selected>✨ Caricamento della magia in corso…</option>';
       select.disabled = true;
       return;
     }
@@ -1449,6 +1449,7 @@ input, select, .authbox input {
     teacherView = 'class';
     resetPointsSelection = false;
     selectedHouse = null;
+    $('houseSearch').value = '';
     $('houseStudentsPanel').style.display = 'none';
     $('castleViewBtn').style.display = 'inline-block';
     $('classCard').style.display = 'none';
@@ -2237,7 +2238,13 @@ input, select, .authbox input {
     st.history = st.history || [];
     st.history.push({ id: Date.now(), date: new Date().toISOString(), grade: 'Encomio speciale', points: 1 });
     resetClassStudentSearch();
+    if($('classCard').style.display !== 'none') {
+      $('classCard').style.display = 'none';
+      $('manageBtn').classList.remove('primary');
+    }
     save(); render();
+    resetClassStudentSearch();
+    renderTeacher(); renderHouseStudents();
     showToast('Encomio assegnato a ' + st.name + ': +1 punto.');
   };
   const awardMalus = id => {
@@ -2249,7 +2256,13 @@ input, select, .authbox input {
     st.history = st.history || [];
     st.history.push({ id: Date.now(), date: new Date().toISOString(), grade: 'Malus', points: -1 });
     resetClassStudentSearch();
+    if($('classCard').style.display !== 'none') {
+      $('classCard').style.display = 'none';
+      $('manageBtn').classList.remove('primary');
+    }
     save(); render();
+    resetClassStudentSearch();
+    renderTeacher(); renderHouseStudents();
     showToast('Malus assegnato a ' + st.name + ': −1 punto.');
   };
 
@@ -2763,6 +2776,8 @@ input, select, .authbox input {
     resetClassStudentSearch();
     save();
     render();
+    resetClassStudentSearch();
+    renderTeacher(); renderHouseStudents();
     $('pointsStudent').value = studentId;
     history();
     showToast('Voto registrato per ' + s.name + ': ' + (p >= 0 ? '+' : '') + pointLabel(p) + '.');
@@ -2813,6 +2828,7 @@ input, select, .authbox input {
     if(role !== 'teacher' || !selectedHouse) return;
     if(e.target.closest('.house') || e.target.closest('#houseStudentsPanel')) return;
     selectedHouse = null;
+    $('houseSearch').value = '';
     $('houseStudentsPanel').style.display = 'none';
     document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
   });
