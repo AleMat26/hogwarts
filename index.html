@@ -2327,12 +2327,25 @@ input, select, .authbox input {
       $('pointsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
       $('gradeInput').focus({ preventScroll: true });
     } else if(edit){
+      // Il render() ricrea la lista e rimuove il pulsante cliccato dal DOM.
+      // Fermiamo la propagazione prima del render, altrimenti il gestore globale
+      // del clic sullo sfondo può interpretare il clic su Rinomina come esterno
+      // alla scheda e chiudere Gestione classe.
+      e.preventDefault();
+      e.stopPropagation();
       const st = state.students.find(x => String(x.id) === edit.dataset.edit);
       if(!st) return;
       const name = prompt('Modifica nome e cognome dello studente:', st.name);
       if(name === null) return;
       if(!name.trim()){ alert('Il nome non può essere vuoto.'); return; }
-      markClassChanged(); st.name = name.trim(); save(); render();
+      markClassChanged();
+      st.name = name.trim();
+      // Mantieni aperta la gestione studenti anche dopo Invio nel prompt.
+      $('manageBtn').classList.add('primary');
+      $('pointsBtn').classList.remove('primary');
+      save();
+      render();
+      $('classCard').style.display = 'block';
     } else if(commend){
       const st = state.students.find(x => String(x.id) === commend.dataset.commend);
       if(st && confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
