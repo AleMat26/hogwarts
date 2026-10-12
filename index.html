@@ -989,7 +989,7 @@ input, select, .authbox input {
       </label>
       <div id="pointPreview" style="padding:14px;border:1px solid #5f5236;border-radius:10px;text-align:center;font-family:system-ui,sans-serif">Inserisci un voto da 1 a 10</div>
       <button type="button" class="btn primary" id="saveGrade">✓ Registra voto e punti</button>
-      <button type="button" class="btn commend" id="commendBtn">✨ Encomio speciale +1 punto</button>
+      <button type="button" class="btn commend" id="commendBtn">✨ Bonus +1 punto</button>
       <button type="button" class="btn" id="malusBtn">⚖️ Malus −1 punto</button>
     </div>
     <div id="gradeHistory" class="list" style="margin-top:18px"></div>
@@ -1494,7 +1494,7 @@ input, select, .authbox input {
         <b>${esc(st.name)}</b>
         <span class="${st.house ? '' : 'unassigned'}" style="padding:6px 10px;border-radius:8px;border:1px solid #5f5236;background:#0f1118;">${st.house ? houses[st.house] : '🎩 Da smistare'}</span>
         <span>${formatPoints(st.points || 0)} pt</span>
-        <div class="student-actions"><button type="button" class="btn small" data-edit="${esc(st.id)}">✎ Rinomina</button>${st.house ? `<button type="button" class="btn small" data-assign-points="${esc(st.id)}">🏆 Punti</button>` : ''}<button type="button" class="btn small commend" data-commend="${esc(st.id)}">✨ Encomio +1</button><button type="button" class="btn small" data-malus="${esc(st.id)}">⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${esc(st.id)}">🗑 Rimuovi</button></div>
+        <div class="student-actions"><button type="button" class="btn small" data-edit="${esc(st.id)}">✎ Rinomina</button>${st.house ? `<button type="button" class="btn small" data-assign-points="${esc(st.id)}">🏆 Punti</button>` : ''}<button type="button" class="btn small commend" data-commend="${esc(st.id)}" ${st.house ? '' : 'disabled title="Disponibile dopo lo smistamento"'}>✨ Bonus +1</button><button type="button" class="btn small" data-malus="${esc(st.id)}" ${st.house ? '' : 'disabled title="Disponibile dopo lo smistamento"'}>⚖️ Malus −1</button><button type="button" class="btn small remove" data-id="${esc(st.id)}">🗑 Rimuovi</button></div>
       </div>`
     ).join('') || '<div class="house-students-empty">Nessuno studente corrisponde ai filtri.</div>';
 
@@ -1518,8 +1518,9 @@ input, select, .authbox input {
     $('pointsStudent').disabled = readOnly;
     $('gradeInput').disabled = readOnly;
     $('saveGrade').disabled = readOnly;
-    $('commendBtn').disabled = readOnly;
-    $('malusBtn').disabled = readOnly;
+    const selectedPointsStudent = state.students.find(st => String(st.id) === String($('pointsStudent').value) && !!st.house);
+    $('commendBtn').disabled = readOnly || !selectedPointsStudent;
+    $('malusBtn').disabled = readOnly || !selectedPointsStudent;
     $('resetBtn').disabled = role === 'teacher' && teacherView === 'castle' ? !state.classes.length : readOnly;
     $('classList').querySelectorAll('button').forEach(button => button.disabled = readOnly);
     history();
@@ -1531,7 +1532,7 @@ input, select, .authbox input {
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
       ((s.history || []).slice().reverse().map(h => 
         `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>${esc(h.grade === 'Encomio speciale' ? '✨ Encomio speciale' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(pointLabel(h.points))}</span>
+          <span>${esc(h.grade === 'Encomio speciale' ? '✨ Bonus' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(pointLabel(h.points))}</span>
           <button type="button" class="del" data-id="${esc(h.id)}" title="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
         </div>`
       ).join('') || '<div>Nessun voto registrato.</div>') : '';
@@ -2267,7 +2268,7 @@ input, select, .authbox input {
     save(); render();
     resetClassStudentSearch();
     renderTeacher(); renderHouseStudents();
-    showToast('Encomio assegnato a ' + st.name + ': +1 punto.');
+    showToast('Bonus assegnato a ' + st.name + ': +1 punto.');
   };
   const awardMalus = id => {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
@@ -2348,7 +2349,7 @@ input, select, .authbox input {
       $('classCard').style.display = 'block';
     } else if(commend){
       const st = state.students.find(x => String(x.id) === commend.dataset.commend);
-      if(st && confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
+      if(st && confirm('Assegnare 1 punto bonus a ' + st.name + '?')) awardCommendation(st.id);
     } else if(malus){
       const st = state.students.find(x => String(x.id) === malus.dataset.malus);
       if(st && confirm('Applicare un malus di −1 punto a ' + st.name + '?')) awardMalus(st.id);
@@ -2388,7 +2389,7 @@ input, select, .authbox input {
   $('commendBtn').onclick = () => {
     const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
     if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
-    if(confirm('Assegnare 1 punto di encomio speciale a ' + st.name + '?')) awardCommendation(st.id);
+    if(confirm('Assegnare 1 punto bonus a ' + st.name + '?')) awardCommendation(st.id);
   };
   $('malusBtn').onclick = () => {
     const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
@@ -2592,7 +2593,7 @@ input, select, .authbox input {
     const movementRows = [['Classe','Anno scolastico','Stato classe','Data','ID studente','Studente','Casata al momento dell’esportazione','Tipo movimento','Voto','Punti','ID movimento']];
     allStudents.forEach(({c,st}) => (st.history || []).forEach(h => {
       let date = h.date || (Number.isFinite(Number(h.id)) && Number(h.id) > 100000000000 ? new Date(Number(h.id)).toISOString() : '');
-      let type = h.grade === 'Encomio speciale' ? 'Encomio speciale' : h.grade === 'Malus' ? 'Malus' : 'Voto';
+      let type = h.grade === 'Encomio speciale' ? 'Bonus' : h.grade === 'Malus' ? 'Malus' : 'Voto';
       movementRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',date ? String(date).slice(0,10) : '',String(st.id ?? ''),st.name,st.house ? houses[st.house] : 'Da smistare',type,(h.grade === 'Encomio speciale' || h.grade === 'Malus') ? '' : (h.grade ?? ''),Number(h.points)||0,String(h.id ?? '')]);
     }));
     const sheetsData = [
