@@ -1070,8 +1070,38 @@ input, select, .authbox input {
 }
 
 
+
+/* Importazione Excel: pannello separato dalla gestione manuale dei punti. */
+#gradeImportCard code { color: var(--gold-soft); }
+#gradeImportCard { box-sizing:border-box; }
+#gradeImportCard > * { min-width:0; }
+#gradeImportCard .grade-import-form { width:100%; max-width:none; }
+#gradeImportCard .grade-import-test-label input { width:100%; box-sizing:border-box; }
+#gradeImportCard .grade-import-actions .btn { flex:1 1 220px; min-width:0; }
+#gradeImportCard #gradeImportStatus,
+#gradeImportCard #gradeImportPreview,
+#gradeImportCard #gradeImportDuplicateConfirmWrap { width:100%; box-sizing:border-box; }
+#gradeImportPreview { overflow-x:auto; }
+.grade-import-summary { display:grid; grid-template-columns:repeat(5,minmax(0,1fr)); gap:6px; margin:12px 0; width:100%; }
+.grade-import-stat { min-width:0; padding:8px 9px; border:1px solid rgba(216,181,106,.25); border-radius:9px; background:rgba(255,255,255,.025); font:11px/1.35 system-ui,sans-serif; overflow-wrap:anywhere; }
+.grade-import-stat strong { display:block; color:var(--gold-soft); font-size:17px; }
+.grade-import-warnings { padding:12px 14px; border:1px solid rgba(213,140,133,.55); border-radius:10px; background:rgba(135,49,49,.13); color:#ffe1df; font:13px/1.5 system-ui,sans-serif; margin:10px 0; box-sizing:border-box; }
+.grade-import-note { padding:12px 14px; border:1px solid rgba(216,181,106,.3); border-radius:10px; background:rgba(216,181,106,.06); color:#e9dfc7; font:13px/1.5 system-ui,sans-serif; margin:10px 0; box-sizing:border-box; }
+.grade-import-table { width:100%; min-width:900px; table-layout:fixed; border-collapse:collapse; font:12px/1.45 system-ui,sans-serif; margin-top:12px; }
+.grade-import-table th,.grade-import-table td { padding:9px 10px; border-bottom:1px solid rgba(255,255,255,.1); text-align:left; white-space:normal; overflow-wrap:anywhere; vertical-align:top; }
+.grade-import-table th { color:var(--gold-soft); background:rgba(255,255,255,.04); }
+.grade-import-table th:nth-child(1),.grade-import-table td:nth-child(1) { width:17%; }
+.grade-import-table th:nth-child(2),.grade-import-table td:nth-child(2) { width:31%; white-space:nowrap; overflow-wrap:normal; }
+.grade-import-table th:nth-child(3),.grade-import-table td:nth-child(3) { width:7%; }
+.grade-import-table th:nth-child(4),.grade-import-table td:nth-child(4) { width:8%; }
+.grade-import-table th:nth-child(5),.grade-import-table td:nth-child(5) { width:14%; }
+.grade-import-table th:nth-child(6),.grade-import-table td:nth-child(6) { width:23%; }
+.grade-import-status-ok { color:#a5e0b4; } .grade-import-status-skip { color:#f0d47e; } .grade-import-status-error { color:#ffb4ae; }
+@media(max-width:700px) { .grade-import-summary { grid-template-columns:repeat(2,minmax(0,1fr)); } #gradeImportCard .btn { width:100%; } .grade-import-table { font-size:11px; } }
+
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -1217,8 +1247,33 @@ input, select, .authbox input {
     <div class="controls-row">
       <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
       <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
+      <button type="button" class="btn" id="importGradeBtn" aria-expanded="false" aria-controls="gradeImportCard">📥 Importa voti</button>
     </div>
   </div>
+
+
+  <!-- IMPORTAZIONE FACOLTATIVA DEI VOTI DA EXCEL -->
+  <section class="card" id="gradeImportCard" style="display:none">
+    <h3>📥 Importa voti</h3>
+    <p class="class-manager-note">Il sistema legge esclusivamente il foglio <strong>Hogwarts</strong> e riconosce gli studenti tramite l’<code>id</code> univoco dello studente nel database.</p>
+    <div class="grade-import-form" style="display:grid;gap:12px;width:100%;min-width:0">
+      <label class="grade-import-test-label" style="display:grid;gap:6px;width:100%;font:14px system-ui,sans-serif;color:var(--muted)">Nome della verifica (per aggiornare sempre la stessa prova)
+        <input id="gradeImportTestName" type="text" maxlength="120" placeholder="es. Verifica di fisica del 17 ottobre" autocomplete="off">
+      </label>
+      <div class="grade-import-actions" style="display:flex;gap:10px;flex-wrap:wrap;width:100%">
+        <button type="button" class="btn" id="exportStudentIdsBtn">⇩ Esporta elenco studenti (.xlsx)</button>
+        <button type="button" class="btn primary" id="chooseGradeFileBtn">＋ Seleziona file Excel</button>
+        <input type="file" id="gradeImportFile" accept=".xlsx,.xls,.xlsm" hidden>
+      </div>
+      <div id="gradeImportStatus" class="class-manager-note" aria-live="polite">Seleziona una verifica e poi un file Excel. Puoi importare un solo file alla volta.</div>
+      <div id="gradeImportPreview" style="display:none"></div>
+      <label id="gradeImportDuplicateConfirmWrap" style="display:none;gap:8px;align-items:flex-start;font:13px/1.5 system-ui,sans-serif;color:#f0dca9">
+        <input id="gradeImportDuplicateConfirm" type="checkbox" style="margin-top:3px">
+        Ho verificato l’avviso e confermo di voler importare nuovamente questa verifica.
+      </label>
+      <button type="button" class="btn primary" id="applyGradeImportBtn" style="display:none" disabled>✓ Conferma e assegna i punti</button>
+    </div>
+  </section>
 
   <!-- GESTIONE CLASSE (DOCENTE) -->
   <section class="card" id="classCard" style="display:none">
@@ -1314,14 +1369,15 @@ input, select, .authbox input {
 </div>
 
 <script>
+
 (function(){
   'use strict';
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
-  const KEY = 'hogwartsState';
+  const KEY = 'hogwartsState_test';
   // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
-  const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
+  const SUPABASE_URL = 'https://gzdtjfzehhthvmdvbhpe.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_uYRroVRtg9BiaHdUjcjtBQ_eCICtNHi';
   // La pagina torna sempre in modalita pubblica al ricaricamento: non conservare la sessione docente nel localStorage del browser condiviso.
   const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
   let supabaseUser = null;
@@ -1335,7 +1391,7 @@ input, select, .authbox input {
   let publicScores = null;
   // La homepage non mostra classi locali finché Supabase non ha risposto.
   let publicDataStatus = 'loading'; // 'loading', 'loaded', 'error'
-  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
+  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId_test';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
   let toastTimer = null;
@@ -1352,6 +1408,9 @@ input, select, .authbox input {
   let state;
   let failedLogins = 0;
   let loginBusy = false;
+  // Stato temporaneo dell'anteprima di importazione Excel.
+  let pendingGradeImport = null;
+  let gradeImportOpen = false;
   let selectedHouse = null;
   let teacherView = 'class'; // 'class' oppure 'castle'
   let resetPointsSelection = true;
@@ -1593,6 +1652,372 @@ input, select, .authbox input {
     '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
   }[c]));
 
+
+  // IMPORTAZIONE FACOLTATIVA DEI VOTI DA EXCEL
+  // Il registro delle importazioni è locale al browser: serve a segnalare file/verifiche già importati.
+  const GRADE_IMPORT_LOG_KEY = KEY + '_gradeImportLog_v1';
+  function gradeImportClassKey(c){
+    return String(c && (c.clientId || c.id) || '');
+  }
+  function normalizeImportText(value){
+    return String(value == null ? '' : value).trim().replace(/\s+/g,' ').toLocaleLowerCase('it');
+  }
+  function getGradeImportLog(){
+    try {
+      const value = JSON.parse(localStorage.getItem(GRADE_IMPORT_LOG_KEY) || '[]');
+      return Array.isArray(value) ? value : [];
+    } catch(e) { return []; }
+  }
+  function setGradeImportStatus(message, isError=false){
+    const el = $('gradeImportStatus');
+    if(!el) return;
+    el.textContent = message;
+    el.style.color = isError ? '#ffb4ae' : '';
+  }
+  function clearGradeImportPreview(message='Seleziona una verifica e poi un file Excel. Puoi importare un solo file alla volta.'){
+    pendingGradeImport = null;
+    $('gradeImportPreview').style.display = 'none';
+    $('gradeImportPreview').innerHTML = '';
+    $('applyGradeImportBtn').style.display = 'none';
+    $('applyGradeImportBtn').disabled = true;
+    $('gradeImportDuplicateConfirmWrap').style.display = 'none';
+    $('gradeImportDuplicateConfirm').checked = false;
+    setGradeImportStatus(message);
+    updateGradeImportAvailability();
+  }
+  function clearGradeImportForm(message='Seleziona una verifica e poi un file Excel. Puoi importare un solo file alla volta.'){
+    const testName = $('gradeImportTestName');
+    const file = $('gradeImportFile');
+    if(testName) testName.value = '';
+    if(file) file.value = '';
+    clearGradeImportPreview(message);
+  }
+  function closeGradeImportPanel(){
+    gradeImportOpen = false;
+    const card = $('gradeImportCard');
+    if(card) card.style.display = 'none';
+    clearGradeImportForm();
+    updateGradeImportAvailability();
+  }
+  function updateGradeImportAvailability(){
+    const c = activeClass();
+    const readOnly = !c || Boolean(c.archived) || role !== 'teacher' || teacherView !== 'class';
+    const choose = $('chooseGradeFileBtn');
+    const previewLocked = Boolean(pendingGradeImport);
+    if(choose) choose.disabled = readOnly || previewLocked;
+    const name = $('gradeImportTestName');
+    if(name) name.disabled = readOnly || previewLocked;
+    const file = $('gradeImportFile');
+    if(file) file.disabled = readOnly || previewLocked;
+    const exportBtn = $('exportStudentIdsBtn');
+    if(exportBtn) exportBtn.disabled = !c || role !== 'teacher' || teacherView !== 'class' || previewLocked;
+    const importBtn = $('importGradeBtn');
+    if(importBtn) {
+      importBtn.setAttribute('aria-expanded', gradeImportOpen ? 'true' : 'false');
+      importBtn.classList.toggle('primary', gradeImportOpen);
+    }
+    if(c && c.archived && role === 'teacher' && teacherView === 'class'){
+      setGradeImportStatus('Classe in archivio: puoi esportare l’elenco degli studenti, ma non importare voti.', true);
+    }
+  }
+  function exportStudentIdsRoster(){
+    const c = activeClass();
+    if(role !== 'teacher' || teacherView !== 'class' || !c) {
+      showToast('Apri una classe per esportare il relativo elenco.');
+      return;
+    }
+    if(!window.XLSX){
+      showToast('Libreria Excel non caricata. Controlla la connessione e ricarica la pagina.');
+      return;
+    }
+    const students = c.students.slice().sort((a,b)=>a.name.localeCompare(b.name,'it'));
+    const withoutDbId = students.filter(st=>!String(st.dbId || '').trim());
+    if(withoutDbId.length){
+      showToast('Non posso esportare gli ID del database: manca l’ID cloud per '+withoutDbId.length+' student'+(withoutDbId.length===1?'e':'i')+'. Ricarica la classe dopo la sincronizzazione.');
+      return;
+    }
+    // Il foglio mantiene l'ID alla destra del nome: durante l'importazione
+    // l'algoritmo cerca la colonna id e legge solo le celle successive.
+    const rows = [
+      ['Classe', c.name],
+      ['Anno scolastico', c.schoolYear || DEFAULT_YEAR],
+      [],
+      ['Nome studente', 'id']
+    ];
+    students.forEach(st => rows.push([st.name, String(st.dbId).trim()]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:32},{wch:38}];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Hogwarts');
+    const safeClass = String(c.name || 'classe').replace(/[^a-z0-9_-]+/gi,'_');
+    XLSX.writeFile(wb, 'Hogwarts_ID_studenti_' + safeClass + '.xlsx');
+    showToast('Elenco studenti e ID del database esportato in Excel.');
+  }
+  function cellIsEmpty(value){
+    return value == null || String(value).trim() === '';
+  }
+  function cellIsZero(value){
+    if(typeof value === 'number') return Number.isFinite(value) && value === 0;
+    const text = String(value == null ? '' : value).trim().replace(',','.');
+    return text !== '' && Number.isFinite(Number(text)) && Number(text) === 0;
+  }
+  function parseGradeCell(value){
+    if(cellIsEmpty(value) || String(value).trim() === '-') return {kind:'absent'};
+    const normalized = typeof value === 'number' ? value : Number(String(value).trim().replace(',','.'));
+    if(!Number.isFinite(normalized) || normalized < 1 || normalized > 10) {
+      return {kind:'invalid', detail:'valore non interpretabile come voto da 1 a 10'};
+    }
+    return {kind:'grade', grade:normalized};
+  }
+  function identifyGradeInRow(row, idCol){
+    // Per ogni studente: confronta la colonna candidata con quella successiva.
+    // Se la successiva è 0, il voto candidato è quello da importare e la ricerca termina.
+    for(let col=idCol+1; col+1<row.length; col++){
+      if(cellIsZero(row[col+1])){
+        const parsed = parseGradeCell(row[col]);
+        if(parsed.kind === 'grade') return {kind:'grade', grade:parsed.grade, column:col};
+        if(parsed.kind === 'absent') return {kind:'absent', column:col};
+        return {kind:'invalid', detail:parsed.detail, column:col};
+      }
+    }
+    return {kind:'notfound', detail:'nessuna coppia conclusiva con 0 trovata'};
+  }
+  async function gradeFileFingerprint(file){
+    try {
+      if(window.crypto && crypto.subtle){
+        const bytes = await file.arrayBuffer();
+        const digest = await crypto.subtle.digest('SHA-256', bytes);
+        return Array.from(new Uint8Array(digest)).map(b=>b.toString(16).padStart(2,'0')).join('');
+      }
+    } catch(e) { console.warn('Impossibile calcolare l’impronta del file:',e); }
+    return [file.name, file.size, file.lastModified].join('|');
+  }
+  function renderGradeImportPreview(result){
+    const target = $('gradeImportPreview');
+    const additions = result.rows.filter(r=>r.action==='add' && r.kind==='grade');
+    const absences = result.rows.filter(r=>r.action==='add' && r.kind==='absent');
+    const updates = result.rows.filter(r=>r.action==='update');
+    const unchanged = result.rows.filter(r=>r.action==='unchanged');
+    const noGrade = result.rows.filter(r=>r.kind==='notfound');
+    const invalid = result.rows.filter(r=>r.kind==='invalid');
+    const fatal = result.fatalIssues.length;
+    const actionable = additions.length + absences.length + updates.length;
+    let html = `<div class="grade-import-summary">
+      <div class="grade-import-stat"><strong>${additions.length}</strong>nuovi voti</div>
+      <div class="grade-import-stat"><strong>${absences.length}</strong>nuove assenze</div>
+      <div class="grade-import-stat"><strong>${updates.length}</strong>voti/assenze da aggiornare</div>
+      <div class="grade-import-stat"><strong>${unchanged.length}</strong>già aggiornati</div>
+      <div class="grade-import-stat"><strong>${result.missingStudents.length}</strong>studenti non presenti nel foglio</div>
+    </div>`;
+    if(result.fatalIssues.length){
+      html += '<div class="grade-import-warnings"><strong>Importazione bloccata: correggi il file prima di procedere.</strong><ul>' +
+        result.fatalIssues.map(x=>`<li>${esc(x)}</li>`).join('') + '</ul></div>';
+    }
+    if(result.warnings.length || invalid.length || noGrade.length){
+      const items = result.warnings.concat(invalid.map(r=>`${r.name} (${r.studentId}): ${r.detail}`), noGrade.map(r=>`${r.name} (${r.studentId}): ${r.detail || 'nessun voto individuato; nessuna modifica'}`));
+      html += '<div class="grade-import-note"><strong>Controlli e avvisi</strong><ul>' + items.map(x=>`<li>${esc(x)}</li>`).join('') + '</ul></div>';
+    }
+    html += '<table class="grade-import-table"><thead><tr><th>Studente</th><th>ID database</th><th>Voto Excel</th><th>Punti</th><th>Casata</th><th>Esito</th></tr></thead><tbody>';
+    html += result.rows.map(r=>{
+      const status = r.kind==='invalid' ? 'Voto non valido' : r.kind==='notfound' ? 'Nessuna modifica' :
+        r.action==='add' && r.kind==='grade' ? 'Nuovo voto' :
+        r.action==='add' && r.kind==='absent' ? 'Registra assenza' :
+        r.action==='update' ? 'Aggiorna voce esistente' : 'Già aggiornato: invariato';
+      const cls = r.kind==='invalid' ? 'grade-import-status-error' : (r.action==='add' || r.action==='update') ? 'grade-import-status-ok' : 'grade-import-status-skip';
+      const gradeLabel = r.kind==='grade' ? esc(r.grade) : r.kind==='absent' ? 'Assente' : '—';
+      return `<tr><td>${esc(r.name || '—')}</td><td>${esc(r.studentId || '—')}</td><td>${gradeLabel}</td><td>${r.kind==='grade' ? esc(pointLabel(r.points)) : '0'}</td><td>${esc(houses[r.student && r.student.house] || 'Non assegnata')}</td><td class="${cls}">${esc(status)}${r.detail ? ': '+esc(r.detail) : ''}</td></tr>`;
+    }).join('');
+    html += '</tbody></table>';
+    target.innerHTML = html;
+    target.style.display = 'block';
+    $('gradeImportDuplicateConfirmWrap').style.display = 'none';
+    const apply = $('applyGradeImportBtn');
+    apply.style.display = 'inline-block';
+    apply.textContent = `✓ Conferma ${actionable} ${actionable===1?'modifica':'modifiche'}`;
+    apply.disabled = fatal > 0 || actionable === 0;
+    if(fatal) setGradeImportStatus('Controlli non superati: nessuna modifica verrà applicata.',true);
+    else if(actionable===0) setGradeImportStatus('Nessuna modifica necessaria: il sito è già allineato al file Excel.');
+    else setGradeImportStatus('Anteprima pronta: nessuna modifica è stata ancora applicata. Conferma per sincronizzare i voti con Excel.');
+    updateGradeImportAvailability();
+  }
+  async function readGradeImportFile(file){
+    const c = activeClass();
+    if(role!=='teacher' || teacherView!=='class' || !c || c.archived){
+      showToast('L’importazione è disponibile solo per una classe attiva in modalità docente.');
+      return;
+    }
+    if(!String($('gradeImportTestName').value || '').trim()){
+      setGradeImportStatus('Inserisci prima il nome della verifica.',true);
+      $('gradeImportTestName').focus();
+      return;
+    }
+    if(!window.XLSX){
+      setGradeImportStatus('Libreria Excel non caricata. Controlla la connessione e ricarica la pagina.',true);
+      return;
+    }
+    clearGradeImportPreview('Lettura del file Excel in corso…');
+    try {
+      const workbook = XLSX.read(await file.arrayBuffer(), {type:'array', cellDates:false});
+      const sheetName = workbook.SheetNames.find(n=>String(n).trim().toLocaleLowerCase('it')==='hogwarts');
+      if(!sheetName) throw new Error('Nel file non è presente un foglio chiamato “Hogwarts”.');
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet,{header:1,raw:true,defval:null,blankrows:false});
+      let headerIndex = -1, idCol = -1;
+      for(let r=0; r<Math.min(rows.length,40); r++){
+        const found = (rows[r] || []).findIndex(v=>String(v==null?'':v).trim().toLocaleLowerCase('it').replace(/[^a-z0-9]/g,'')==='id');
+        if(found>=0){headerIndex=r;idCol=found;break;}
+      }
+      if(headerIndex<0) throw new Error('Nel foglio “Hogwarts” non è stata trovata un’intestazione “id”. Usa l’ID univoco dello studente esportato dal database.');
+      const classStudents = c.students || [];
+      const studentByDatabaseId = new Map();
+      const duplicateRosterIds = [];
+      const missingDatabaseIds = [];
+      classStudents.forEach(st=>{
+        const id=String(st.dbId || '').trim();
+        if(!id){ missingDatabaseIds.push(st.name); return; }
+        if(studentByDatabaseId.has(id)) duplicateRosterIds.push(id);
+        else studentByDatabaseId.set(id,st);
+      });
+      const fatalIssues=[];
+      if(missingDatabaseIds.length) fatalIssues.push('Manca l’ID del database per: '+missingDatabaseIds.join(', ')+'. Ricarica la classe dopo la sincronizzazione con il database.');
+      if(duplicateRosterIds.length) fatalIssues.push('La classe contiene ID database duplicati: '+[...new Set(duplicateRosterIds)].join(', ')+'. L’importazione è bloccata per evitare assegnazioni errate.');
+      const seen=new Map();
+      const rowsOut=[];
+      const warnings=[];
+      for(let ri=headerIndex+1;ri<rows.length;ri++){
+        const row=rows[ri] || [];
+        if(!row.some(v=>!cellIsEmpty(v))) continue;
+        const rawId=row[idCol];
+        const studentId=String(rawId==null?'':rawId).trim();
+        if(!studentId){
+          fatalIssues.push(`Riga Excel ${ri+1}: contiene dati ma manca l’id dello studente.`);
+          continue;
+        }
+        if(seen.has(studentId)){
+          fatalIssues.push(`ID studente duplicato “${studentId}” nelle righe Excel ${seen.get(studentId)+1} e ${ri+1}.`);
+          continue;
+        }
+        seen.set(studentId,ri);
+        const student=studentByDatabaseId.get(studentId);
+        if(!student){
+          fatalIssues.push(`Riga Excel ${ri+1}: l’id “${studentId}” non appartiene alla classe selezionata.`);
+          continue;
+        }
+        const detected=identifyGradeInRow(row,idCol);
+        rowsOut.push({
+          studentId, student, name:student.name,
+          kind:detected.kind, grade:detected.grade,
+          points:detected.kind==='grade' ? score(detected.grade) : null,
+          detail:detected.detail || ''
+        });
+      }
+      const presentIds=new Set(rowsOut.map(r=>r.studentId));
+      const missingStudents=classStudents.filter(st=>!presentIds.has(String(st.dbId || '').trim()));
+      if(missingStudents.length) warnings.push('Nel foglio non compaiono: '+missingStudents.map(st=>st.name).join(', ')+'. Non verranno modificati.');
+      const fingerprint=await gradeFileFingerprint(file);
+      const testName=String($('gradeImportTestName').value || '').trim();
+      const classKey=gradeImportClassKey(c);
+      // La chiave incrementale è studente + nome verifica. Il file Excel è autorevole:
+      // stesso voto = nessuna azione; voto cambiato = aggiorna la voce e la differenza punti;
+      // assenza = voce a zero punti, sostituibile in seguito con il voto di recupero.
+      for(const entry of rowsOut){
+        if(entry.kind==='notfound' || entry.kind==='invalid') continue;
+        const st=entry.student;
+        const matches=(st.history||[]).filter(h=>normalizeImportText(h.testName || h.reference)===normalizeImportText(testName));
+        if(matches.length>1){
+          fatalIssues.push(`${entry.name}: esistono ${matches.length} voci storiche associate alla verifica “${testName}”. Correggi lo storico prima di importare per evitare modifiche ambigue.`);
+          entry.action='blocked';
+          continue;
+        }
+        entry.existingHistory=matches[0] || null;
+        if(!matches.length){ entry.action='add'; continue; }
+        const old=matches[0];
+        const oldIsAbsent=normalizeImportText(old.grade)==='assente' || normalizeImportText(old.grade)==='assenza';
+        const newIsAbsent=entry.kind==='absent';
+        const oldGrade=Number(old.grade);
+        const sameGrade=!newIsAbsent && !oldIsAbsent && Number.isFinite(oldGrade) && oldGrade===Number(entry.grade);
+        if((newIsAbsent && oldIsAbsent) || sameGrade){ entry.action='unchanged'; }
+        else { entry.action='update'; }
+      }
+      // Le righe non presenti nel foglio non vengono eliminate: il foglio dovrebbe essere completo,
+      // ma per sicurezza l'importazione non cancella dati solo perché manca una riga.
+      const result={classKey,classId:String(c.id),className:c.name,schoolYear:c.schoolYear || DEFAULT_YEAR,
+        fileName:file.name,fingerprint,testName,rows:rowsOut,fatalIssues,warnings,missingStudents};
+      pendingGradeImport=result;
+      renderGradeImportPreview(result);
+    } catch(error) {
+      console.error('Errore lettura importazione Excel:',error);
+      clearGradeImportPreview('Impossibile leggere il file: '+(error && error.message ? error.message : 'errore sconosciuto'),);
+      setGradeImportStatus('Impossibile leggere il file: '+(error && error.message ? error.message : 'errore sconosciuto'),true);
+    }
+  }
+  function applyGradeImport(){
+    const result=pendingGradeImport;
+    const c=activeClass();
+    if(!result || !c || role!=='teacher' || teacherView!=='class' || c.archived) return;
+    if(String(c.id)!==result.classId || gradeImportClassKey(c)!==result.classKey){
+      showToast('La classe selezionata è cambiata: ricarica il file e controlla di nuovo l’anteprima.');
+      clearGradeImportPreview('La classe è cambiata. Seleziona nuovamente il file.');
+      return;
+    }
+    if(result.fatalIssues.length){
+      showToast('Importazione bloccata: controlla gli avvisi nell’anteprima.');
+      return;
+    }
+    const timestamp=Date.now();
+    let added=0, updated=0, absences=0, unchanged=0, totalDelta=0;
+    for(const entry of result.rows){
+      if(entry.kind==='notfound' || entry.kind==='invalid') continue;
+      const st=c.students.find(x=>String(x.dbId || '').trim()===entry.studentId);
+      if(!st) continue;
+      st.history=Array.isArray(st.history)?st.history:[];
+      const newGrade=entry.kind==='absent' ? 'Assente' : Number(entry.grade);
+      const newPoints=entry.kind==='absent' ? 0 : score(entry.grade);
+      if(entry.action==='unchanged'){ unchanged++; continue; }
+      markClassChanged();
+      if(entry.action==='add'){
+        st.history.push({
+          id:timestamp+added+updated+absences, date:new Date().toISOString(), grade:newGrade, points:newPoints,
+          source:'Importazione Excel', testName:result.testName, reference:result.testName
+        });
+        st.points=(Number(st.points)||0)+newPoints;
+        totalDelta+=newPoints;
+        if(entry.kind==='absent') absences++; else added++;
+      } else if(entry.action==='update' && entry.existingHistory){
+        const old=entry.existingHistory;
+        const oldPoints=Number(old.points)||0;
+        const delta=newPoints-oldPoints;
+        old.grade=newGrade;
+        old.points=newPoints;
+        old.source='Importazione Excel';
+        old.testName=result.testName;
+        old.reference=result.testName;
+        old.date=new Date().toISOString();
+        st.points=(Number(st.points)||0)+delta;
+        totalDelta+=delta;
+        updated++;
+      }
+      if(entry.action==='add' || entry.action==='update') markHouseCupDirty();
+    }
+    if(!added && !updated && !absences){
+      closeGradeImportPanel();
+      showToast('Nessuna modifica necessaria: i voti sono già allineati al file Excel.');
+      return;
+    }
+    const log=getGradeImportLog();
+    log.push({classKey:result.classKey,className:result.className,schoolYear:result.schoolYear,
+      testName:result.testName,fileName:result.fileName,fingerprint:result.fingerprint,
+      importedAt:new Date().toISOString(),added,updated,absences,unchanged,pointsDelta:totalDelta});
+    try { localStorage.setItem(GRADE_IMPORT_LOG_KEY,JSON.stringify(log.slice(-500))); }
+    catch(e){ console.warn('Registro locale importazioni non salvato:',e); }
+    save();
+    render();
+    renderTeacher();
+    renderHouseStudents();
+    closeGradeImportPanel();
+    showToast(`Excel sincronizzato: ${added} nuovi voti, ${absences} assenze registrate, ${updated} voci aggiornate, ${unchanged} già invariat${unchanged===1?'a':'e'}.`);
+  }
+
   function totals(students = state.students){
     let t = { g: 0, t: 0, r: 0, s: 0 };
     students.forEach(s => {
@@ -1797,6 +2222,7 @@ input, select, .authbox input {
     selectedHouse = null;
     $('manageBtn').classList.remove('primary');
     $('pointsBtn').classList.remove('primary');
+    closeGradeImportPanel();
     document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
     renderHouseCupArchive();
     try { await loadHouseCupArchive(); }
@@ -2085,6 +2511,8 @@ if (inCastle) {
     $('castleStudentSearch').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' ? 'flex' : 'none';
+    $('gradeImportCard').style.display = role === 'teacher' && teacherView === 'class' && !!activeClass() && gradeImportOpen ? 'block' : 'none';
+    updateGradeImportAvailability();
     $('classCard').style.display = role === 'teacher' && teacherView === 'class' && $('manageBtn').classList.contains('primary') ? 'block' : 'none';
     $('pointsCard').style.display = role === 'teacher' && teacherView === 'class' && $('pointsBtn').classList.contains('primary') ? 'block' : 'none';
 
@@ -2280,12 +2708,16 @@ if (inCastle) {
     let s = state.students.find(x => String(x.id) === String($('pointsStudent').value));
     $('gradeHistory').innerHTML = s ? 
       `<h4 style="margin:0 0 10px">Storico di ${esc(s.name)}</h4>` +
-      ((s.history || []).slice().reverse().map(h => 
-        `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
-          <span>${esc(h.grade === 'Encomio speciale' ? '✨ Bonus' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(pointLabel(h.points))}</span>
-          <button type="button" class="del" data-id="${esc(h.id)}" title="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px">🗑️</button>
-        </div>`
-      ).join('') || '<div>Nessun voto registrato.</div>') : '';
+      ((s.history || []).slice().reverse().map(h => {
+        const reference = String(h.reference || h.testName || '').trim();
+        return `<div style="display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border:1px solid #3f3b32;border-radius:10px">
+          <span style="min-width:0"><span>${esc(h.grade === 'Encomio speciale' ? '✨ Bonus' : h.grade === 'Malus' ? '⚖️ Malus' : 'Voto ' + h.grade)} → ${esc(h.points >= 0 ? '+' : '')}${esc(pointLabel(h.points))}</span>${reference ? `<span style="display:block;margin-top:4px;font-size:12px;opacity:.82">Verifica: ${esc(reference)}</span>` : ''}</span>
+          <span style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+            ${h.grade !== 'Encomio speciale' && h.grade !== 'Malus' && Number.isFinite(Number(h.grade)) ? `<button type="button" class="edit-grade" data-id="${esc(h.id)}" title="Modifica voto" aria-label="Modifica voto" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:17px;padding:3px">✏️</button>` : ''}
+            <button type="button" class="del" data-id="${esc(h.id)}" title="Rimuovi voce" aria-label="Rimuovi voce" ${activeIsArchived() ? 'disabled' : ''} style="border:0;background:transparent;cursor:pointer;font-size:18px;padding:3px">🗑️</button>
+          </span>
+        </div>`;
+      }).join('') || '<div>Nessun voto registrato.</div>') : '';
   }
 
   function setRole(r){
@@ -2308,6 +2740,8 @@ if (inCastle) {
       $('pointsBtn').classList.remove('primary');
     }
     resetPointsSelection = true;
+    clearGradeImportPreview();
+    $('gradeImportFile').value = '';
     $('gradeInput').value = '';
     const isTeacher = r === 'teacher';
     $('teacherControls').style.display = isTeacher ? 'flex' : 'none';
@@ -2333,6 +2767,52 @@ if (inCastle) {
     loginBusy = false;
     render();
   }
+
+
+  $('exportStudentIdsBtn').addEventListener('click', exportStudentIdsRoster);
+  $('importGradeBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    if(role !== 'teacher' || teacherView !== 'class' || !activeClass()) return;
+
+    // I pannelli operativi sono mutuamente esclusivi: aprire Importa voti
+    // chiude sempre Gestisci studenti e Gestisci punti.
+    if($('classCard').style.display !== 'none') resetClassStudentSearch();
+    $('classCard').style.display = 'none';
+    $('pointsCard').style.display = 'none';
+    $('manageBtn').classList.remove('primary');
+    $('pointsBtn').classList.remove('primary');
+
+    // Chiudi anche l'eventuale pannello della Casata aperto nella classe.
+    selectedHouse = null;
+    $('houseSearch').value = '';
+    $('houseStudentsPanel').style.display = 'none';
+    document.querySelectorAll('.house').forEach(card => card.classList.remove('selected'));
+
+    if(gradeImportOpen) {
+      closeGradeImportPanel();
+    } else {
+      gradeImportOpen = true;
+      $('gradeImportCard').style.display = 'block';
+      updateGradeImportAvailability();
+    }
+  });
+  $('chooseGradeFileBtn').addEventListener('click',()=>{
+    if(activeIsArchived()){ showToast('La classe è in archivio e non può essere modificata.'); return; }
+    if(!String($('gradeImportTestName').value||'').trim()){
+      setGradeImportStatus('Inserisci prima il nome della verifica.',true);
+      $('gradeImportTestName').focus();
+      return;
+    }
+    $('gradeImportFile').click();
+  });
+  $('gradeImportFile').addEventListener('change',async e=>{
+    const file=e.target.files && e.target.files[0];
+    if(file) await readGradeImportFile(file);
+  });
+  $('gradeImportDuplicateConfirm').addEventListener('change',()=>{
+    if(pendingGradeImport) renderGradeImportPreview(pendingGradeImport);
+  });
+  $('applyGradeImportBtn').addEventListener('click',applyGradeImport);
 
   // Event Listeners
   // L'Albo d'oro si chiude cliccando sullo sfondo o su un'altra parte della pagina.
@@ -2540,7 +3020,7 @@ if (inCastle) {
     const studentIds = studentRows.map(s => s.id);
     let gradeRows = [];
     if(studentIds.length){
-      const { data, error } = await supabase.from('grades').select('id,student_id,history_id,grade,points,entry_type,created_at').in('student_id', studentIds).order('created_at');
+      const { data, error } = await supabase.from('grades').select('id,student_id,history_id,grade,points,entry_type,reference,created_at').in('student_id', studentIds).order('created_at');
       if(error) throw error;
       gradeRows = data || [];
     }
@@ -2550,7 +3030,7 @@ if (inCastle) {
       gradesByStudent.get(String(h.student_id)).push({
         id: h.history_id || String(h.id), date: h.created_at,
         grade: h.entry_type === 'encomio' ? 'Encomio speciale' : h.entry_type === 'malus' ? 'Malus' : h.grade,
-        points: Number(h.points) || 0, dbId: h.id
+        points: Number(h.points) || 0, reference: h.reference || '', dbId: h.id
       });
     }
     const studentsByClass = new Map();
@@ -2676,7 +3156,7 @@ if (inCastle) {
           const hid = String(h.id);
           const entryType = h.grade === 'Encomio speciale' ? 'encomio' : h.grade === 'Malus' ? 'malus' : 'voto';
           const numericGrade = entryType === 'voto' && Number.isFinite(Number(h.grade)) ? Number(h.grade) : null;
-          const gradePayload = { student_id: st.dbId, history_id: hid, grade: numericGrade, points: Number(h.points) || 0, entry_type: entryType };
+          const gradePayload = { student_id: st.dbId, history_id: hid, grade: numericGrade, points: Number(h.points) || 0, entry_type: entryType, reference: String(h.reference || h.testName || '').trim() || null };
           const found = existingGradeByHistory.get(hid);
           const gr = found
             ? await supabase.from('grades').update(gradePayload).eq('id', found.id).select('id').single()
@@ -2704,7 +3184,7 @@ if (inCastle) {
   const classClientKey = c => String(c.clientId || c.id);
   const studentClientKey = st => String(st.clientId || st.id);
   const historyClientKey = h => String(h.id);
-  const historyPayload = h => ({ grade: h.grade === 'Encomio speciale' || h.grade === 'Malus' ? null : (Number.isFinite(Number(h.grade)) ? Number(h.grade) : null), points: Number(h.points) || 0, entry_type: h.grade === 'Encomio speciale' ? 'encomio' : h.grade === 'Malus' ? 'malus' : 'voto' });
+  const historyPayload = h => ({ grade: h.grade === 'Encomio speciale' || h.grade === 'Malus' ? null : (Number.isFinite(Number(h.grade)) ? Number(h.grade) : null), points: Number(h.points) || 0, entry_type: h.grade === 'Encomio speciale' ? 'encomio' : h.grade === 'Malus' ? 'malus' : 'voto', reference: String(h.reference || h.testName || '').trim() || null });
   const sameClassFields = (a,b) => a && b && a.name === b.name && (a.schoolYear || DEFAULT_YEAR) === (b.schoolYear || DEFAULT_YEAR) && Boolean(a.archived) === Boolean(b.archived) && Boolean(a.resetForDeletion) === Boolean(b.resetForDeletion);
   const sameStudentFields = (a,b) => a && b && a.name === b.name && (a.house || null) === (b.house || null) && (Number(a.points)||0) === (Number(b.points)||0);
   const sameHistoryFields = (a,b) => a && b && stableJson(historyPayload(a)) === stableJson(historyPayload(b));
@@ -2760,7 +3240,7 @@ if (inCastle) {
         const currentHistoryMap = new Map((st.history || []).map(h => [historyClientKey(h), h]));
         for(const h of (st.history || [])){
           const hkey = historyClientKey(h), oldH = oldHistoryMap.get(hkey), hp = historyPayload(h);
-          const gradePayload = { student_id: st.dbId, history_id: hkey, grade: hp.grade, points: hp.points, entry_type: hp.entry_type };
+          const gradePayload = { student_id: st.dbId, history_id: hkey, grade: hp.grade, points: hp.points, entry_type: hp.entry_type, reference: hp.reference };
           if(!h.dbId){
             const { data, error } = await supabase.from('grades').insert(gradePayload).select('id').single();
             if(error) throw error;
@@ -2847,6 +3327,7 @@ if (inCastle) {
     state.schoolYear = target.schoolYear;
     state.students = target.students;
     state.nextId = target.nextId;
+    clearGradeImportForm();
     selectedHouse = null;
     $('houseSearch').value = '';
     $('studentSearch').value = '';
@@ -3746,11 +4227,11 @@ $('reviewHousesBtn').onclick = () => {
       cupRows.push(['Classe',c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',t.g,t.t,t.r,t.s,houseKeys.reduce((n,k)=>n+t[k],0),c.students.length]);
     });
 
-    const movementRows = [['Classe','Anno scolastico','Stato classe','Data','ID studente','Studente','Casata al momento dell’esportazione','Tipo movimento','Voto','Punti','ID movimento']];
+    const movementRows = [['Classe','Anno scolastico','Stato classe','Data','ID studente','Studente','Casata al momento dell’esportazione','Tipo movimento','Voto','Punti','Referenza','ID movimento']];
     allStudents.forEach(({c,st}) => (st.history || []).forEach(h => {
       let date = h.date || (Number.isFinite(Number(h.id)) && Number(h.id) > 100000000000 ? new Date(Number(h.id)).toISOString() : '');
       let type = h.grade === 'Encomio speciale' ? 'Bonus' : h.grade === 'Malus' ? 'Malus' : 'Voto';
-      movementRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',date ? String(date).slice(0,10) : '',String(st.id ?? ''),st.name,st.house ? houses[st.house] : 'Da smistare',type,(h.grade === 'Encomio speciale' || h.grade === 'Malus') ? '' : (h.grade ?? ''),Number(h.points)||0,String(h.id ?? '')]);
+      movementRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',date ? String(date).slice(0,10) : '',String(st.id ?? ''),st.name,st.house ? houses[st.house] : 'Da smistare',type,(h.grade === 'Encomio speciale' || h.grade === 'Malus') ? '' : (h.grade ?? ''),Number(h.points)||0,String(h.reference || h.testName || ''),String(h.id ?? '')]);
     }));
     const sheetsData = [
       {name:'Castello', rows:castleRows},
@@ -4112,20 +4593,60 @@ $('reviewHousesBtn').onclick = () => {
 
   $('gradeHistory').onclick = e => {
     if(activeIsArchived()){ showToast('Lo storico in archivio è di sola consultazione.'); return; }
-    let b = e.target.closest('.del');
-    if(!b) return;
-    let s = state.students.find(x => String(x.id) === String($('pointsStudent').value)),
-        i = s.history.findIndex(h => String(h.id) === b.dataset.id);
-    if(i >= 0 && confirm('Rimuovere questo voto?')){
+    const editButton = e.target.closest('.edit-grade');
+    if(editButton){
+      const student = state.students.find(x => String(x.id) === String($('pointsStudent').value));
+      if(!student) return;
+      const entry = (student.history || []).find(h => String(h.id) === editButton.dataset.id);
+      if(!entry || entry.grade === 'Encomio speciale' || entry.grade === 'Malus') return;
+      const oldGrade = Number(entry.grade);
+      const answer = prompt('Inserisci il nuovo voto (da 1 a 10):', String(entry.grade).replace('.', ','));
+      if(answer === null) return;
+      const newGrade = Number(answer.trim().replace(',', '.'));
+      if(!Number.isFinite(newGrade) || newGrade < 1 || newGrade > 10){
+        alert('Inserisci un voto valido compreso tra 1 e 10.');
+        return;
+      }
+      if(newGrade === oldGrade) return;
+      const oldPoints = Number(entry.points) || 0;
+      const newPoints = score(newGrade);
       markClassChanged();
-      const removedPoints = Number(s.history[i].points) || 0;
-      s.points -= removedPoints;
+      entry.grade = newGrade;
+      entry.points = newPoints;
+      student.points += newPoints - oldPoints;
+      if(newPoints !== oldPoints) markHouseCupDirty();
+      const selectedStudentId = String(student.id);
+      save();
+      render();
+      $('pointsStudent').value = selectedStudentId;
+      history();
+      renderHouseStudents();
+      showToast('Voto aggiornato: ' + oldGrade + ' → ' + newGrade + '. Punteggio dello studente ricalcolato.');
+      return;
+    }
+    const deleteButton = e.target.closest('.del');
+    if(!deleteButton) return;
+    const student = state.students.find(x => String(x.id) === String($('pointsStudent').value));
+    if(!student) return;
+    const index = (student.history || []).findIndex(h => String(h.id) === deleteButton.dataset.id);
+    if(index >= 0 && confirm('Rimuovere questo voto?')){
+      markClassChanged();
+      const removedPoints = Number(student.history[index].points) || 0;
+      student.points -= removedPoints;
       if(removedPoints !== 0) markHouseCupDirty();
-      s.history.splice(i, 1);
+      student.history.splice(index, 1);
       save();
       render();
     }
   };
+
+  // Importa voti si comporta come un pannello a comparsa: un clic al suo interno
+  // lo mantiene aperto; un clic sullo sfondo o su un altro pulsante lo chiude.
+  document.addEventListener('click', e => {
+    if(!gradeImportOpen) return;
+    if(e.target.closest('#gradeImportCard, #importGradeBtn')) return;
+    closeGradeImportPanel();
+  });
 
   // Un clic sullo sfondo chiude le schede operative della classe.
   document.addEventListener('click', e => {
@@ -4157,6 +4678,7 @@ $('reviewHousesBtn').onclick = () => {
   setRole('student');
   loadPublicData();
 })();
+
 </script>
 </body>
 </html>
