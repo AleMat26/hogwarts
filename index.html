@@ -1374,10 +1374,10 @@ input, select, .authbox input {
   'use strict';
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
-   const KEY = 'hogwartsState';
+  const KEY = 'hogwartsState_test';
   // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
-  const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
+  const SUPABASE_URL = 'https://gzdtjfzehhthvmdvbhpe.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_uYRroVRtg9BiaHdUjcjtBQ_eCICtNHi';
   // La pagina torna sempre in modalita pubblica al ricaricamento: non conservare la sessione docente nel localStorage del browser condiviso.
   const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
   let supabaseUser = null;
@@ -1391,7 +1391,7 @@ input, select, .authbox input {
   let publicScores = null;
   // La homepage non mostra classi locali finché Supabase non ha risposto.
   let publicDataStatus = 'loading'; // 'loading', 'loaded', 'error'
-  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
+  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId_test';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
   let toastTimer = null;
@@ -2563,7 +2563,7 @@ if (inCastle) {
     results.innerHTML = matches.slice(0,50).map(item => {
       const st = item.student;
       const house = st.house && houses[st.house] ? houses[st.house] : 'Da smistare';
-      return `<button type="button" class="castle-student-result" data-student-class="${esc(item.classId)}" aria-label="Apri la classe ${esc(item.className)} per ${esc(st.name)}">
+      return `<button type="button" class="castle-student-result" data-student-class="${esc(item.classId)}" data-student-id="${esc(st.id)}" aria-label="Apri direttamente la gestione dei punteggi di ${esc(st.name)}">
         <span><strong>${esc(st.name)}</strong><br><span class="student-result-meta">${esc(house)} · ${esc(item.className)} · ${esc(item.schoolYear || '')}${item.archived ? ' · Archivio' : ''}</span></span>
         <span class="student-result-points">${pointLabel(st.points || 0)}</span>
       </button>`;
@@ -2618,6 +2618,27 @@ if (inCastle) {
     }
     $('houseStudentsPanel').style.display = 'block';
   }
+
+  // All'apertura delle schede, porta la linea superiore del bordo
+  // a metà altezza della finestra; il contenuto della scheda resta sotto.
+  function alignManagementPanelTopToWindowMiddle(panel){
+    requestAnimationFrame(() => requestAnimationFrame(() => {
+      const targetTop = window.scrollY + panel.getBoundingClientRect().top - window.innerHeight / 2;
+      window.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+    }));
+  }
+  const operationalPanelsObserver = new MutationObserver(mutations => {
+    for(const mutation of mutations){
+      const panel = mutation.target;
+      if(panel.style.display === 'none') continue;
+      if(panel.id === 'classCard' || panel.id === 'pointsCard'){
+        alignManagementPanelTopToWindowMiddle(panel);
+        break;
+      }
+    }
+  });
+  operationalPanelsObserver.observe($('classCard'), { attributes: true, attributeFilter: ['style'] });
+  operationalPanelsObserver.observe($('pointsCard'), { attributes: true, attributeFilter: ['style'] });
 
   function openStudentPoints(studentId){
     const st = state.students.find(x => String(x.id) === String(studentId));
@@ -2844,12 +2865,19 @@ if (inCastle) {
     switchClass(card.dataset.castleClass);
   });
   $('castleStudentSearchResults').addEventListener('click', e => {
-    const result = e.target.closest('[data-student-class]');
+    const result = e.target.closest('[data-student-class][data-student-id]');
     if(!result) return;
+    // Questo clic proviene dal Castello: non deve arrivare al gestore globale
+    // che interpreta i clic esterni alle schede come richiesta di chiusura.
+    e.preventDefault();
+    e.stopPropagation();
     const classId = result.dataset.studentClass;
+    const studentId = result.dataset.studentId;
     $('castleStudentSearchInput').value = '';
     renderCastleStudentSearch();
+    // Apri la classe di appartenenza e passa direttamente alla box dei punteggi.
     switchClass(classId);
+    openStudentPoints(studentId);
   });
 
   // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
@@ -3928,7 +3956,7 @@ $('promoteClassBtn').onclick = async () => {
         studentSelect.value = targetId;
       }
       history();
-      $('pointsCard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      alignManagementPanelTopToWindowMiddle($('pointsCard'));
       if(!activeIsArchived()) $('gradeInput').focus({ preventScroll: true });
     } else if(edit){
       // Il render() ricrea la lista e rimuove il pulsante cliccato dal DOM.
