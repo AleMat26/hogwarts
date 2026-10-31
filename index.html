@@ -1416,12 +1416,13 @@ input, select, .authbox input {
   'use strict';
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
-  const KEY = 'hogwartsState';
+  const KEY = 'hogwartsState_test';
   // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
-  const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
-  // Attivare dopo aver collegato Archivio Sticker allo stesso progetto Supabase.
-  const STICKER_ARCHIVE_LINK_READY = false;
+  const SUPABASE_URL = 'https://gzdtjfzehhthvmdvbhpe.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_uYRroVRtg9BiaHdUjcjtBQ_eCICtNHi';
+  // Archivio Sticker usa lo stesso progetto Supabase ufficiale: il client autenticato
+  // di Hogwarts legge lo storico e genera URL temporanei per le immagini private.
+  const STICKER_ARCHIVE_LINK_READY = true;
   // La pagina torna sempre in modalita pubblica al ricaricamento: non conservare la sessione docente nel localStorage del browser condiviso.
   const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
   let supabaseUser = null;
@@ -1435,7 +1436,7 @@ input, select, .authbox input {
   let publicScores = null;
   // La homepage non mostra classi locali finché Supabase non ha risposto.
   let publicDataStatus = 'loading'; // 'loading', 'loaded', 'error'
-  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
+  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId_test';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
   let toastTimer = null;
@@ -2842,7 +2843,8 @@ if (inCastle) {
   }
   async function loadStudentProfileStickers(student, cls){
     const target = $('studentProfileStickersContent');
-    if(!STICKER_ARCHIVE_LINK_READY){ target.textContent='La sezione Collezione sticker è pronta. Il caricamento sarà attivato quando collegheremo Archivio Sticker a questo progetto Supabase; per ora gli indirizzi dei due progetti restano invariati.'; return; }
+    if(!STICKER_ARCHIVE_LINK_READY){ target.textContent='La sezione Collezione sticker non è attiva.'; return; }
+    if(role !== 'teacher' || !supabaseUser){ target.textContent='Lo storico degli sticker è visibile solo in modalità docente.'; return; }
     if(!supabase){ target.textContent='Connessione Supabase non disponibile.'; return; }
     try{
       const {data:rows,error}=await supabase.from('sticker_assignment_history')
@@ -2850,7 +2852,7 @@ if (inCastle) {
         .eq('student_id',String(student.dbId || student.id)).eq('class_id',String(cls.dbId || cls.id))
         .eq('is_absent',false).not('sticker_id','is',null).order('test_date',{ascending:true}).order('assigned_at',{ascending:true});
       if(error) throw error;
-      if(!rows || !rows.length){target.textContent='Non ci sono ancora sticker registrati per questo studente. La collezione comparirà dopo aver collegato Archivio Sticker a questo progetto Supabase e registrato una prova.';return;}
+      if(!rows || !rows.length){target.textContent='Non ci sono ancora sticker registrati per questo studente.';return;}
       const ids=[...new Set(rows.map(r=>r.sticker_id).filter(Boolean))];
       const {data:meta,error:metaError}=await supabase.from('sticker_archive').select('id,file_path').in('id',ids);
       if(metaError) throw metaError;
