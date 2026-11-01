@@ -1416,10 +1416,10 @@ input, select, .authbox input {
   'use strict';
   
   const houses = { g: 'Grifondoro', t: 'Tassorosso', r: 'Corvonero', s: 'Serpeverde' };
-  const KEY = 'hogwartsState';
+  const KEY = 'hogwartsState_test';
   // Configurazione del client Supabase: usare esclusivamente la chiave pubblicabile.
-  const SUPABASE_URL = 'https://wfcujsqswmmapddnzmew.supabase.co';
-  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_hZbJF0N-cYDwWLIKI8g79Q_IHGxjC2G';
+  const SUPABASE_URL = 'https://gzdtjfzehhthvmdvbhpe.supabase.co';
+  const SUPABASE_PUBLISHABLE_KEY = 'sb_publishable_uYRroVRtg9BiaHdUjcjtBQ_eCICtNHi';
   // Archivio Sticker usa lo stesso progetto Supabase ufficiale: il client autenticato
   // di Hogwarts legge lo storico e genera URL temporanei per le immagini private.
   const STICKER_ARCHIVE_LINK_READY = true;
@@ -1436,7 +1436,7 @@ input, select, .authbox input {
   let publicScores = null;
   // La homepage non mostra classi locali finché Supabase non ha risposto.
   let publicDataStatus = 'loading'; // 'loading', 'loaded', 'error'
-  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId';
+  const PUBLIC_CLASS_KEY = 'hogwartsPublicClassId_test';
   const ALL_ACTIVE_CLASSES = '__all_active_classes__';
   const $ = id => document.getElementById(id);
   let toastTimer = null;
@@ -1843,15 +1843,17 @@ input, select, .authbox input {
     const absences = result.rows.filter(r=>r.action==='add' && r.kind==='absent');
     const updates = result.rows.filter(r=>r.action==='update');
     const unchanged = result.rows.filter(r=>r.action==='unchanged');
+    const deduplications = result.rows.filter(r=>(r.duplicateHistory||[]).length>0);
     const noGrade = result.rows.filter(r=>r.kind==='notfound');
     const invalid = result.rows.filter(r=>r.kind==='invalid');
     const fatal = result.fatalIssues.length;
-    const actionable = additions.length + absences.length + updates.length;
+    const actionable = additions.length + absences.length + updates.length + deduplications.length;
     let html = `<div class="grade-import-summary">
       <div class="grade-import-stat"><strong>${additions.length}</strong>nuovi voti</div>
       <div class="grade-import-stat"><strong>${absences.length}</strong>nuove assenze</div>
       <div class="grade-import-stat"><strong>${updates.length}</strong>voti/assenze da aggiornare</div>
       <div class="grade-import-stat"><strong>${unchanged.length}</strong>già aggiornati</div>
+      <div class="grade-import-stat"><strong>${deduplications.reduce((n,r)=>n+(r.duplicateHistory||[]).length,0)}</strong>doppioni da accorpare</div>
       <div class="grade-import-stat"><strong>${result.missingStudents.length}</strong>studenti non presenti nel foglio</div>
     </div>`;
     if(result.fatalIssues.length){
@@ -1867,10 +1869,11 @@ input, select, .authbox input {
       const status = r.kind==='invalid' ? 'Voto non valido' : r.kind==='notfound' ? 'Nessuna modifica' :
         r.action==='add' && r.kind==='grade' ? 'Nuovo voto' :
         r.action==='add' && r.kind==='absent' ? 'Registra assenza' :
-        r.action==='update' ? 'Aggiorna voce esistente' : 'Già aggiornato: invariato';
-      const cls = r.kind==='invalid' ? 'grade-import-status-error' : (r.action==='add' || r.action==='update') ? 'grade-import-status-ok' : 'grade-import-status-skip';
+        r.action==='update' ? 'Aggiorna voce esistente' : r.action==='dedupe' ? `Accorpa ${r.duplicateHistory.length} doppioni` : 'Già aggiornato: invariato';
+      const statusWithDuplicates = (r.duplicateHistory||[]).length && r.action==='update' ? `${status} + accorpa ${r.duplicateHistory.length} doppioni` : status;
+      const cls = r.kind==='invalid' ? 'grade-import-status-error' : (r.action==='add' || r.action==='update' || r.action==='dedupe') ? 'grade-import-status-ok' : 'grade-import-status-skip';
       const gradeLabel = r.kind==='grade' ? esc(r.grade) : r.kind==='absent' ? 'Assente' : '—';
-      return `<tr><td>${esc(r.name || '—')}</td><td>${esc(r.studentId || '—')}</td><td>${gradeLabel}</td><td>${r.kind==='grade' ? esc(pointLabel(r.points)) : '0'}</td><td>${esc(houses[r.student && r.student.house] || 'Non assegnata')}</td><td class="${cls}">${esc(status)}${r.detail ? ': '+esc(r.detail) : ''}</td></tr>`;
+      return `<tr><td>${esc(r.name || '—')}</td><td>${esc(r.studentId || '—')}</td><td>${gradeLabel}</td><td>${r.kind==='grade' ? esc(pointLabel(r.points)) : '0'}</td><td>${esc(houses[r.student && r.student.house] || 'Non assegnata')}</td><td class="${cls}">${esc(statusWithDuplicates)}${r.detail ? ': '+esc(r.detail) : ''}</td></tr>`;
     }).join('');
     html += '</tbody></table>';
     target.innerHTML = html;
@@ -1969,19 +1972,18 @@ input, select, .authbox input {
         if(entry.kind==='notfound' || entry.kind==='invalid') continue;
         const st=entry.student;
         const matches=(st.history||[]).filter(h=>normalizeImportText(h.testName || h.reference)===normalizeImportText(testName));
-        if(matches.length>1){
-          fatalIssues.push(`${entry.name}: esistono ${matches.length} voci storiche associate alla verifica “${testName}”. Correggi lo storico prima di importare per evitare modifiche ambigue.`);
-          entry.action='blocked';
-          continue;
-        }
+        // Se una stessa verifica è stata registrata più volte (per esempio dopo
+        // aver cambiato la data), conserva la prima voce e accorpa le successive.
+        matches.sort((a,b)=>(Date.parse(a.date||'')||0)-(Date.parse(b.date||'')||0));
         entry.existingHistory=matches[0] || null;
+        entry.duplicateHistory=matches.slice(1);
         if(!matches.length){ entry.action='add'; continue; }
         const old=matches[0];
         const oldIsAbsent=normalizeImportText(old.grade)==='assente' || normalizeImportText(old.grade)==='assenza';
         const newIsAbsent=entry.kind==='absent';
         const oldGrade=Number(old.grade);
         const sameGrade=!newIsAbsent && !oldIsAbsent && Number.isFinite(oldGrade) && oldGrade===Number(entry.grade);
-        if((newIsAbsent && oldIsAbsent) || sameGrade){ entry.action='unchanged'; }
+        if((newIsAbsent && oldIsAbsent) || sameGrade){ entry.action=entry.duplicateHistory.length ? 'dedupe' : 'unchanged'; }
         else { entry.action='update'; }
       }
       // Le righe non presenti nel foglio non vengono eliminate: il foglio dovrebbe essere completo,
@@ -2010,7 +2012,7 @@ input, select, .authbox input {
       return;
     }
     const timestamp=Date.now();
-    let added=0, updated=0, absences=0, unchanged=0, totalDelta=0;
+    let added=0, updated=0, absences=0, unchanged=0, deduplicated=0, totalDelta=0;
     for(const entry of result.rows){
       if(entry.kind==='notfound' || entry.kind==='invalid') continue;
       const st=c.students.find(x=>String(x.dbId || '').trim()===entry.studentId);
@@ -2020,6 +2022,19 @@ input, select, .authbox input {
       const newPoints=entry.kind==='absent' ? 0 : score(entry.grade);
       if(entry.action==='unchanged'){ unchanged++; continue; }
       markClassChanged();
+      if(entry.duplicateHistory && entry.duplicateHistory.length){
+        const duplicateSet=new Set(entry.duplicateHistory);
+        const removedPoints=entry.duplicateHistory.reduce((sum,h)=>sum+(Number(h.points)||0),0);
+        st.history=st.history.filter(h=>!duplicateSet.has(h));
+        st.points=(Number(st.points)||0)-removedPoints;
+        totalDelta-=removedPoints;
+        deduplicated+=entry.duplicateHistory.length;
+        markHouseCupDirty();
+      }
+      if(entry.action==='dedupe'){
+        markHouseCupDirty();
+        continue;
+      }
       if(entry.action==='add'){
         st.history.push({
           id:timestamp+added+updated+absences, date:new Date().toISOString(), grade:newGrade, points:newPoints,
@@ -2044,7 +2059,7 @@ input, select, .authbox input {
       }
       if(entry.action==='add' || entry.action==='update') markHouseCupDirty();
     }
-    if(!added && !updated && !absences){
+    if(!added && !updated && !absences && !deduplicated){
       closeGradeImportPanel();
       showToast('Nessuna modifica necessaria: i voti sono già allineati al file Excel.');
       return;
@@ -2052,7 +2067,7 @@ input, select, .authbox input {
     const log=getGradeImportLog();
     log.push({classKey:result.classKey,className:result.className,schoolYear:result.schoolYear,
       testName:result.testName,fileName:result.fileName,fingerprint:result.fingerprint,
-      importedAt:new Date().toISOString(),added,updated,absences,unchanged,pointsDelta:totalDelta});
+      importedAt:new Date().toISOString(),added,updated,absences,unchanged,deduplicated,pointsDelta:totalDelta});
     try { localStorage.setItem(GRADE_IMPORT_LOG_KEY,JSON.stringify(log.slice(-500))); }
     catch(e){ console.warn('Registro locale importazioni non salvato:',e); }
     save();
@@ -2060,7 +2075,7 @@ input, select, .authbox input {
     renderTeacher();
     renderHouseStudents();
     closeGradeImportPanel();
-    showToast(`Excel sincronizzato: ${added} nuovi voti, ${absences} assenze registrate, ${updated} voci aggiornate, ${unchanged} già invariat${unchanged===1?'a':'e'}.`);
+    showToast(`Excel sincronizzato: ${added} nuovi voti, ${absences} assenze registrate, ${updated} voci aggiornate, ${deduplicated} doppioni eliminati, ${unchanged} già invariat${unchanged===1?'a':'e'}.`);
   }
 
   function totals(students = state.students){
