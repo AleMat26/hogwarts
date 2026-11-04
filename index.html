@@ -2987,6 +2987,21 @@ if (inCastle) {
     </div>`;
   }
 
+  // In modalità docente il roster della classe è già presente nello stato
+  // caricato da Supabase. Non deve dipendere dal caricamento riservato
+  // all'accesso degli account studente.
+  function prepareTeacherStudentHouseRoster(cls){
+    if(role !== 'teacher' || studentAccountMode || !cls) return;
+    studentHouseRoster = (cls.students || []).map(st=>({
+      id:String(st.dbId || st.id),
+      name:String(st.name || ''),
+      house:['g','t','r','s'].includes(st.house) ? st.house : null,
+      points:Number(st.points) || 0
+    }));
+    studentHouseRosterReady = true;
+    studentHouseRosterError = '';
+  }
+
   function renderStudentProfileHouses(cls){
     const roster = studentHouseRosterReady ? studentHouseRoster : [];
     const totalsByHouse = {g:0,t:0,r:0,s:0};
@@ -3041,6 +3056,9 @@ if (inCastle) {
     if(!student) return;
     const cls = activeClass();
     if(!cls) return;
+    // Il profilo docente usa i dati già caricati per la classe selezionata;
+    // il profilo studente continua invece a usare il roster letto con RLS.
+    prepareTeacherStudentHouseRoster(cls);
     profileReturnToPoints = !!returnToPoints;
     openedStudentProfileId = String(student.id);
     profilePreviousClassScroll = window.scrollY;
