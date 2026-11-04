@@ -1112,7 +1112,8 @@ input, select, .authbox input {
 .student-profile-houses .student-house-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
 .student-profile-houses .student-house-card { cursor:pointer; min-width:0; }
 .student-profile-houses .student-house-card:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
-.student-profile-houses .student-house-card.selected { box-shadow:0 0 0 2px var(--gold),0 0 18px rgba(216,181,106,.2); }
+/* La selezione serve solo a gestire il pannello: non deve evidenziare la Casata cliccata. Il bordo dorato è riservato esclusivamente alla Casata in testa. */
+.student-profile-houses .student-house-card.selected { box-shadow:none; border-color:color-mix(in srgb, currentColor 24%, transparent); }
 .student-profile-house-summary { display:none; margin-top:16px; padding:18px; border:1px solid var(--line); border-radius:14px; background:#12151e; }
 .student-profile-house-members { display:none; margin-top:14px; padding:16px; border:1px solid var(--line); border-radius:14px; background:#12151e; }
 .student-profile-house-members.active { display:block; }
