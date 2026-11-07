@@ -3538,6 +3538,7 @@ if (inCastle) {
     $('studentAccountStatus').textContent='Seleziona uno studente.';
     $('createStudentAccountBtn').disabled=true;
     $('resetStudentPasswordBtn').disabled=true;
+    $('studentAccountsBtn').classList.remove('primary');
   }
   $('studentAccountsBtn').addEventListener('click',()=>{
     const panel=$('studentAccountManagerCard');
@@ -3548,6 +3549,7 @@ if (inCastle) {
     }
     panel.dataset.open='true';
     panel.style.display='block';
+    $('studentAccountsBtn').classList.add('primary');
     $('studentAccountStudentSelect').selectedIndex=0;
     $('studentAccountUsername').value='';
     $('studentAccountUsername').disabled=false;
@@ -3597,6 +3599,10 @@ if (inCastle) {
   $('importGradeBtn').addEventListener('click', e => {
     e.stopPropagation();
     if(role !== 'teacher' || teacherView !== 'class' || !activeClass()) return;
+
+    // Anche Importa voti deve chiudere Account studenti: questo handler
+    // ferma la propagazione del click prima del listener globale di chiusura.
+    closeStudentAccountsPanel();
 
     // I pannelli operativi sono mutuamente esclusivi: aprire Importa voti
     // chiude sempre Gestisci studenti e Gestisci punti.
