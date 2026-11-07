@@ -2862,7 +2862,7 @@ if (inCastle) {
     renderCastleClassScores();
     $('castleStudentSearch').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
-    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' ? 'flex' : 'none';
+    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' && !selectedHouse ? 'flex' : 'none';
     $('studentAccountManagerCard').style.display = role === 'teacher' && teacherView === 'class' && !$('studentProfileView').classList.contains('active') && $('studentAccountManagerCard').dataset.open === 'true' ? 'block' : 'none';
     $('gradeImportCard').style.display = role === 'teacher' && teacherView === 'class' && !!activeClass() && gradeImportOpen ? 'block' : 'none';
     updateGradeImportAvailability();
@@ -3308,7 +3308,7 @@ if (inCastle) {
     $('houseCupArchivePanel').style.display = 'none';
     $('houses').style.display = '';
     $('ranking').style.display = 'block';
-    $('teacherWorkControls').style.display = '';
+    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' && !selectedHouse ? 'flex' : 'none';
     $('castleStudentSearch').style.display = teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = teacherView === 'castle' ? 'block' : 'none';
     if(profileReturnToPoints){
