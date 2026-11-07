@@ -2862,7 +2862,7 @@ if (inCastle) {
     renderCastleClassScores();
     $('castleStudentSearch').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
-    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' && !selectedHouse ? 'flex' : 'none';
+    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' ? 'flex' : 'none';
     $('studentAccountManagerCard').style.display = role === 'teacher' && teacherView === 'class' && !$('studentProfileView').classList.contains('active') && $('studentAccountManagerCard').dataset.open === 'true' ? 'block' : 'none';
     $('gradeImportCard').style.display = role === 'teacher' && teacherView === 'class' && !!activeClass() && gradeImportOpen ? 'block' : 'none';
     updateGradeImportAvailability();
@@ -3308,7 +3308,7 @@ if (inCastle) {
     $('houseCupArchivePanel').style.display = 'none';
     $('houses').style.display = '';
     $('ranking').style.display = 'block';
-    $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' && !selectedHouse ? 'flex' : 'none';
+    $('teacherWorkControls').style.display = '';
     $('castleStudentSearch').style.display = teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = teacherView === 'castle' ? 'block' : 'none';
     if(profileReturnToPoints){
@@ -3663,7 +3663,7 @@ if (inCastle) {
   });
 
   // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
-  document.querySelectorAll('.house').forEach(card => {
+  document.querySelectorAll('#houses [data-house-card]').forEach(card => {
     const openHouse = () => {
       if(role !== 'teacher' || (!['class','castle'].includes(teacherView) && !activeIsArchived())) return;
       const key = card.dataset.houseCard;
