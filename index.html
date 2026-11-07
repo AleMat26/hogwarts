@@ -766,6 +766,13 @@ header .title::after {
 #teacherControls .controls-row + .controls-row { padding-top: 10px; border-top: 1px solid rgba(226,194,122,.13); }
 #teacherWorkControls { margin-top: 22px; }
 #teacherWorkControls .controls-row::before { content: 'Gestione operativa'; }
+#teacherWorkControls .controls-row .btn {
+  min-width: 0;
+  padding-left: 8px;
+  padding-right: 8px;
+  font-size: clamp(10px, 1.05vw, 13px);
+  white-space: normal;
+}
 #accessSection { padding: 12px 20px; margin-bottom: 42px; }
 #accessSection .controls .btn { padding-top: 10px; padding-bottom: 10px; }
 /* Coppa delle Case: il distacco è leggibile e la parità viene evidenziata correttamente */
@@ -1374,6 +1381,7 @@ input, select, .authbox input {
       <button type="button" class="btn" id="pointsBtn">🏆 Gestisci punti</button>
       <button type="button" class="btn" id="importGradeBtn" aria-expanded="false" aria-controls="gradeImportCard">📥 Importa voti</button>
       <button type="button" class="btn" id="studentAccountsBtn">🔐 Account studenti</button>
+      <button type="button" class="btn" id="assessmentSessionsBtn" aria-expanded="false" aria-controls="assessmentSessionsCard">📢 Pubblicazione dei risultati</button>
     </div>
   </div>
 
@@ -1582,6 +1590,7 @@ input, select, .authbox input {
   let pendingGradeImport = null;
   let gradeImportOpen = false;
   let assessmentSessions = [];
+  let assessmentSessionsOpen = false;
   let assessmentSessionsClassId = null;
   let assessmentSessionsLoading = false;
   let selectedHouse = null;
@@ -2167,13 +2176,22 @@ input, select, .authbox input {
     }
     throw error;
   }
+  function closeAssessmentSessionsPanel(){
+    assessmentSessionsOpen=false;
+    const card=$('assessmentSessionsCard');
+    if(card) card.style.display='none';
+    const button=$('assessmentSessionsBtn');
+    if(button){
+      button.classList.remove('primary');
+      button.setAttribute('aria-expanded','false');
+    }
+  }
   async function refreshAssessmentSessions(force=false){
     const c=activeClass();
     const card=$('assessmentSessionsCard');
     if(!card) return;
-    const visible=role==='teacher' && teacherView==='class' && !$('studentProfileView').classList.contains('active') && c && !c.archived && !!c.dbId;
-    card.style.display=visible?'block':'none';
-    if(!visible) return;
+    const available=role==='teacher' && teacherView==='class' && !$('studentProfileView').classList.contains('active') && c && !c.archived && !!c.dbId;
+    if(!available){ closeAssessmentSessionsPanel(); return; }
     if(assessmentSessionsLoading) return;
     if(!force && assessmentSessionsClassId===String(c.dbId)) return;
     assessmentSessionsLoading=true;
@@ -3302,7 +3320,7 @@ if (inCastle) {
     $('studentProfileView').classList.remove('active');
     $('studentAccountManagerCard').style.display = role === 'teacher' && teacherView === 'class' && $('studentAccountManagerCard').dataset.open === 'true' ? 'block' : 'none';
     const currentClass = activeClass();
-    $('assessmentSessionsCard').style.display = role === 'teacher' && teacherView === 'class' && currentClass && !currentClass.archived && !!currentClass.dbId ? 'block' : 'none';
+    $('assessmentSessionsCard').style.display = assessmentSessionsOpen && role === 'teacher' && teacherView === 'class' && currentClass && !currentClass.archived && !!currentClass.dbId ? 'block' : 'none';
     $('classManager').style.display = 'block';
     $('teacherControls').style.display = 'flex';
     $('houseCupArchivePanel').style.display = 'none';
@@ -3351,9 +3369,10 @@ if (inCastle) {
   });
 
   function setRole(r){
+    closeAssessmentSessionsPanel();
     role = r;
     const assessmentCard=$('assessmentSessionsCard');
-    if(assessmentCard) assessmentCard.style.display=(r==='teacher' && teacherView==='class')?'block':'none';
+    if(assessmentCard) assessmentCard.style.display='none';
     studentAccountMode = false;
     studentAccountRecord = null;
     $('studentAccountManagerCard').style.display = 'none';
@@ -3595,6 +3614,26 @@ if (inCastle) {
     }finally{ button.disabled=false; }
   });
 
+  $('assessmentSessionsBtn').addEventListener('click',()=>{
+    if(role!=='teacher' || teacherView!=='class' || !activeClass() || activeClass().archived || !activeClass().dbId) return;
+    if(assessmentSessionsOpen){
+      closeAssessmentSessionsPanel();
+      return;
+    }
+    assessmentSessionsOpen=true;
+    $('assessmentSessionsCard').style.display='block';
+    $('assessmentSessionsBtn').classList.add('primary');
+    $('assessmentSessionsBtn').setAttribute('aria-expanded','true');
+    refreshAssessmentSessions();
+  });
+  // La pubblicazione dei risultati segue la stessa regola degli altri pannelli:
+  // resta aperta solo dentro il pannello o sul pulsante dedicato.
+  document.addEventListener('click',e=>{
+    if(!assessmentSessionsOpen || role!=='teacher' || teacherView!=='class') return;
+    if(e.target.closest('#assessmentSessionsCard, #assessmentSessionsBtn')) return;
+    closeAssessmentSessionsPanel();
+  });
+
   $('exportStudentIdsBtn').addEventListener('click', exportStudentIdsRoster);
   $('importGradeBtn').addEventListener('click', e => {
     e.stopPropagation();
@@ -3603,6 +3642,7 @@ if (inCastle) {
     // Anche Importa voti deve chiudere Account studenti: questo handler
     // ferma la propagazione del click prima del listener globale di chiusura.
     closeStudentAccountsPanel();
+    closeAssessmentSessionsPanel();
 
     // I pannelli operativi sono mutuamente esclusivi: aprire Importa voti
     // chiude sempre Gestisci studenti e Gestisci punti.
