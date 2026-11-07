@@ -3527,12 +3527,43 @@ if (inCastle) {
       await updateStudentAccountInfo(true);
     }
   }
+  function closeStudentAccountsPanel(){
+    const panel=$('studentAccountManagerCard');
+    panel.dataset.open='false';
+    panel.style.display='none';
+    $('studentAccountStudentSelect').selectedIndex=0;
+    $('studentAccountUsername').value='';
+    $('studentAccountUsername').disabled=false;
+    $('studentAccountResult').innerHTML='';
+    $('studentAccountStatus').textContent='Seleziona uno studente.';
+    $('createStudentAccountBtn').disabled=true;
+    $('resetStudentPasswordBtn').disabled=true;
+  }
   $('studentAccountsBtn').addEventListener('click',()=>{
     const panel=$('studentAccountManagerCard');
     const opening=panel.dataset.open!=='true';
-    panel.dataset.open=opening?'true':'false';
-    panel.style.display=opening?'block':'none';
-    if(opening) renderStudentAccountStudentOptions();
+    if(!opening){
+      closeStudentAccountsPanel();
+      return;
+    }
+    panel.dataset.open='true';
+    panel.style.display='block';
+    $('studentAccountStudentSelect').selectedIndex=0;
+    $('studentAccountUsername').value='';
+    $('studentAccountUsername').disabled=false;
+    $('studentAccountResult').innerHTML='';
+    $('studentAccountStatus').textContent='Seleziona uno studente.';
+    $('createStudentAccountBtn').disabled=true;
+    $('resetStudentPasswordBtn').disabled=true;
+    renderStudentAccountStudentOptions();
+  });
+  // Account studenti si comporta come le altre schede operative:
+  // resta aperta solo finché si interagisce al suo interno o sul pulsante dedicato.
+  document.addEventListener('click',e=>{
+    const panel=$('studentAccountManagerCard');
+    if(role!=='teacher' || teacherView!=='class' || panel.dataset.open!=='true') return;
+    if(e.target.closest('#studentAccountManagerCard, #studentAccountsBtn')) return;
+    closeStudentAccountsPanel();
   });
   $('studentAccountStudentSelect').addEventListener('change',()=>{ $('studentAccountResult').innerHTML=''; updateStudentAccountInfo(); });
   $('createStudentAccountBtn').addEventListener('click',()=>manageStudentAccount('create'));
