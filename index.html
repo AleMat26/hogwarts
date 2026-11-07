@@ -2171,7 +2171,7 @@ input, select, .authbox input {
     const c=activeClass();
     const card=$('assessmentSessionsCard');
     if(!card) return;
-    const visible=role==='teacher' && teacherView==='class' && c && !c.archived && !!c.dbId;
+    const visible=role==='teacher' && teacherView==='class' && !$('studentProfileView').classList.contains('active') && c && !c.archived && !!c.dbId;
     card.style.display=visible?'block':'none';
     if(!visible) return;
     if(assessmentSessionsLoading) return;
@@ -2863,7 +2863,7 @@ if (inCastle) {
     $('castleStudentSearch').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('castleClassScores').style.display = role === 'teacher' && teacherView === 'castle' ? 'block' : 'none';
     $('teacherWorkControls').style.display = role === 'teacher' && teacherView === 'class' ? 'flex' : 'none';
-    $('studentAccountManagerCard').style.display = role === 'teacher' && teacherView === 'class' && $('studentAccountManagerCard').dataset.open === 'true' ? 'block' : 'none';
+    $('studentAccountManagerCard').style.display = role === 'teacher' && teacherView === 'class' && !$('studentProfileView').classList.contains('active') && $('studentAccountManagerCard').dataset.open === 'true' ? 'block' : 'none';
     $('gradeImportCard').style.display = role === 'teacher' && teacherView === 'class' && !!activeClass() && gradeImportOpen ? 'block' : 'none';
     updateGradeImportAvailability();
     $('classCard').style.display = role === 'teacher' && teacherView === 'class' && $('manageBtn').classList.contains('primary') ? 'block' : 'none';
@@ -3233,6 +3233,9 @@ if (inCastle) {
     $('castleStudentSearch').style.display = 'none';
     $('castleClassScores').style.display = 'none';
     $('teacherWorkControls').style.display = 'none';
+    // Le funzioni operative restano disponibili soltanto nella pagina della classe.
+    $('studentAccountManagerCard').style.display = 'none';
+    $('assessmentSessionsCard').style.display = 'none';
     $('studentProfileView').classList.add('active');
     $('studentProfileName').textContent = student.name;
     $('studentProfileMeta').textContent = `${cls.name} · ${cls.schoolYear || 'anno non indicato'} · ${student.house ? houses[student.house] : 'Casata non assegnata'} · Media ${(() => { const grades=(student.history||[]).map(h=>Number(String(h.grade).replace(',','.'))).filter(n=>Number.isFinite(n)&&n>=1&&n<=10); return grades.length ? formatDisplayNumber(grades.reduce((a,b)=>a+b,0)/grades.length) : '—'; })()}`;
@@ -3297,6 +3300,9 @@ if (inCastle) {
       return;
     }
     $('studentProfileView').classList.remove('active');
+    $('studentAccountManagerCard').style.display = role === 'teacher' && teacherView === 'class' && $('studentAccountManagerCard').dataset.open === 'true' ? 'block' : 'none';
+    const currentClass = activeClass();
+    $('assessmentSessionsCard').style.display = role === 'teacher' && teacherView === 'class' && currentClass && !currentClass.archived && !!currentClass.dbId ? 'block' : 'none';
     $('classManager').style.display = 'block';
     $('teacherControls').style.display = 'flex';
     $('houseCupArchivePanel').style.display = 'none';
