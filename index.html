@@ -3268,7 +3268,8 @@ if (inCastle) {
     $('studentProfileMeta').textContent = `${cls.name} · ${cls.schoolYear || 'anno non indicato'} · ${student.house ? houses[student.house] : 'Casata non assegnata'} · Totale punti ${formatPoints(student.points || 0)}`;
     const totalsNow = totals(state.students);
     $('studentProfileSigil').textContent = houseSigils[student.house] || '🎩';
-    $('studentProfileHousePoints').textContent = `${formatPoints(student.house ? totalsNow[student.house] : 0)} pt`;
+    const profileHouseTotal = student.house ? (studentAccountMode ? studentHouseTotals[student.house] : totalsNow[student.house]) : 0;
+    $('studentProfileHousePoints').textContent = `${formatPoints(profileHouseTotal)} pt`;
     $('studentProfileHouseMembers').style.display='none';
     document.querySelectorAll('[data-student-house-card]').forEach(card=>card.classList.remove('selected'));
     renderStudentProfileHouses(cls);
