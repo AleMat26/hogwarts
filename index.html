@@ -3265,7 +3265,7 @@ if (inCastle) {
     $('assessmentSessionsCard').style.display = 'none';
     $('studentProfileView').classList.add('active');
     $('studentProfileName').textContent = student.name;
-    $('studentProfileMeta').textContent = `${cls.name} · ${cls.schoolYear || 'anno non indicato'} · ${student.house ? houses[student.house] : 'Casata non assegnata'} · Media ${(() => { const grades=(student.history||[]).map(h=>Number(String(h.grade).replace(',','.'))).filter(n=>Number.isFinite(n)&&n>=1&&n<=10); return grades.length ? formatDisplayNumber(grades.reduce((a,b)=>a+b,0)/grades.length) : '—'; })()}`;
+    $('studentProfileMeta').textContent = `${cls.name} · ${cls.schoolYear || 'anno non indicato'} · ${student.house ? houses[student.house] : 'Casata non assegnata'} · Totale punti ${formatPoints(student.points || 0)}`;
     const totalsNow = totals(state.students);
     $('studentProfileSigil').textContent = houseSigils[student.house] || '🎩';
     $('studentProfileHousePoints').textContent = `${formatPoints(student.house ? totalsNow[student.house] : 0)} pt`;
