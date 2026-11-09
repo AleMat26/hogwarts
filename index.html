@@ -2299,6 +2299,7 @@ input, select, .authbox input {
         if(entry.kind==='absent') absences++; else added++;
       } else if(entry.action==='update' && entry.existingHistory){
         const old=entry.existingHistory;
+        const wasAbsent=normalizeImportText(old.grade)==='assente' || normalizeImportText(old.grade)==='assenza';
         const oldPoints=Number(old.points)||0;
         const delta=newPoints-oldPoints;
         old.grade=newGrade;
@@ -2314,7 +2315,7 @@ input, select, .authbox input {
         // L'assenza non aveva uno sticker da correggere: lo sticker del recupero
         // verrà assegnato dalla pagina Archivio Sticker. Per una correzione di
         // un voto già presente aggiorniamo invece soltanto i dati numerici sul retro.
-        if(!oldIsAbsent && newGrade!=='Assente'){
+        if(!wasAbsent && newGrade!=='Assente'){
           stickerCorrections.push({studentId:st.dbId,grade:Number(newGrade),points:newPoints});
         }
         st.points=(Number(st.points)||0)+delta;
