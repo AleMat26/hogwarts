@@ -2126,8 +2126,7 @@ input, select, .authbox input {
         if(entry.kind==='notfound' || entry.kind==='invalid') continue;
         const st=entry.student;
         const matches=(st.history||[]).filter(h=>
-          normalizeImportText(h.testName || h.reference)===normalizeImportText(testName) &&
-          String(h.testDate || '')===testDate
+          normalizeImportText(h.testName || h.reference)===normalizeImportText(testName)
         );
         if(matches.length>1){
           fatalIssues.push(`${entry.name}: esistono ${matches.length} voci storiche associate alla verifica “${testName}”. Correggi lo storico prima di importare per evitare modifiche ambigue.`);
@@ -2141,8 +2140,16 @@ input, select, .authbox input {
         const newIsAbsent=entry.kind==='absent';
         const oldGrade=Number(old.grade);
         const sameGrade=!newIsAbsent && !oldIsAbsent && Number.isFinite(oldGrade) && oldGrade===Number(entry.grade);
-        if((newIsAbsent && oldIsAbsent) || sameGrade){ entry.action='unchanged'; }
-        else { entry.action='update'; }
+        const sameOriginalDate=String(old.testDate || '')===testDate && !!old.testDate;
+        // Un recupero non modifica mai un voto già acquisito: aggiorna soltanto
+        // la voce che era stata registrata come assenza. Le correzioni dei voti
+        // restano possibili reimportando la data della prova originale.
+        if(oldIsAbsent && !newIsAbsent){ entry.action='update'; }
+        else if(oldIsAbsent && newIsAbsent){ entry.action='unchanged'; }
+        else if(newIsAbsent){ entry.action='unchanged'; }
+        else if(sameGrade){ entry.action='unchanged'; }
+        else if(sameOriginalDate){ entry.action='update'; }
+        else { entry.action='unchanged'; }
       }
       // Le righe non presenti nel foglio non vengono eliminate: il foglio dovrebbe essere completo,
       // ma per sicurezza l'importazione non cancella dati solo perché manca una riga.
@@ -2161,9 +2168,11 @@ input, select, .authbox input {
     const find = async () => {
       const {data,error}=await supabase.from('assessment_sessions')
         .select('id,class_id,test_name,test_date,published_at,expected_students')
-        .eq('class_id',classId).eq('test_date',testDate);
+        .eq('class_id',classId);
       if(error) throw error;
-      return (data||[]).find(row=>normalizeAssessmentName(row.test_name)===normalizeAssessmentName(testName)) || null;
+      const matches=(data||[]).filter(row=>normalizeAssessmentName(row.test_name)===normalizeAssessmentName(testName));
+      if(matches.length>1) throw new Error('Esistono più sessioni con lo stesso nome per questa classe. Per sicurezza non posso associare il recupero: occorre verificare le sessioni duplicate.');
+      return matches[0] || null;
     };
     const saveExpected=async existing=>{
       const expected=Math.max(Number(existing.expected_students)||0,Number(expectedStudents)||0);
@@ -2290,6 +2299,7 @@ input, select, .authbox input {
         if(entry.kind==='absent') absences++; else added++;
       } else if(entry.action==='update' && entry.existingHistory){
         const old=entry.existingHistory;
+        const wasAbsent=normalizeImportText(old.grade)==='assente' || normalizeImportText(old.grade)==='assenza';
         const oldPoints=Number(old.points)||0;
         const delta=newPoints-oldPoints;
         old.grade=newGrade;
@@ -2297,10 +2307,17 @@ input, select, .authbox input {
         old.source='Importazione Excel';
         old.testName=result.testName;
         old.reference=result.testName;
-        old.testDate=result.testDate;
+        // La data e la sessione restano quelle della prova originale anche
+        // quando questa voce viene completata nel giorno del recupero.
+        old.testDate=old.testDate || assessmentSession.test_date || result.testDate;
         old.assessmentId=old.assessmentId || assessmentSession.id;
         old.date=new Date().toISOString();
-        stickerCorrections.push({studentId:st.dbId,grade:newGrade==='Assente'?null:Number(newGrade),points:newPoints});
+        // L'assenza non aveva uno sticker da correggere: lo sticker del recupero
+        // verrà assegnato dalla pagina Archivio Sticker. Per una correzione di
+        // un voto già presente aggiorniamo invece soltanto i dati numerici sul retro.
+        if(!wasAbsent && newGrade!=='Assente'){
+          stickerCorrections.push({studentId:st.dbId,grade:Number(newGrade),points:newPoints});
+        }
         st.points=(Number(st.points)||0)+delta;
         totalDelta+=delta;
         updated++;
