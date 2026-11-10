@@ -1200,7 +1200,7 @@ input, select, .authbox input {
 
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
 </head>
 <body>
 <div id="app">
@@ -1560,6 +1560,20 @@ input, select, .authbox input {
   // La pagina torna sempre in modalita pubblica al ricaricamento: non conservare la sessione docente nel localStorage del browser condiviso.
   const supabase = window.supabase?.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, { auth: { persistSession: false } }) || null;
   let supabaseUser = null;
+  let xlsxLoadPromise = null;
+  function ensureXlsxLoaded(){
+    if(window.XLSX) return Promise.resolve(window.XLSX);
+    if(!xlsxLoadPromise){
+      xlsxLoadPromise = new Promise((resolve,reject)=>{
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js';
+        script.onload = ()=>resolve(window.XLSX);
+        script.onerror = ()=>{ xlsxLoadPromise = null; reject(new Error('Impossibile caricare la libreria Excel. Controlla la connessione e riprova.')); };
+        document.head.appendChild(script);
+      });
+    }
+    return xlsxLoadPromise;
+  }
   let remoteSyncPromise = Promise.resolve();
   let remoteSyncRequested = false;
   let remoteSyncRunning = false;
@@ -1916,16 +1930,14 @@ input, select, .authbox input {
       setGradeImportStatus('Classe in archivio: puoi esportare l’elenco degli studenti, ma non importare voti.', true);
     }
   }
-  function exportStudentIdsRoster(){
+  async function exportStudentIdsRoster(){
     const c = activeClass();
     if(role !== 'teacher' || teacherView !== 'class' || !c) {
       showToast('Apri una classe per esportare il relativo elenco.');
       return;
     }
-    if(!window.XLSX){
-      showToast('Libreria Excel non caricata. Controlla la connessione e ricarica la pagina.');
-      return;
-    }
+    try { await ensureXlsxLoaded(); }
+    catch(error){ showToast(error.message || 'Libreria Excel non disponibile.'); return; }
     const students = c.students.slice().sort((a,b)=>a.name.localeCompare(b.name,'it'));
     const withoutDbId = students.filter(st=>!String(st.dbId || '').trim());
     if(withoutDbId.length){
@@ -2052,12 +2064,9 @@ input, select, .authbox input {
       $('gradeImportTestDate').focus();
       return;
     }
-    if(!window.XLSX){
-      setGradeImportStatus('Libreria Excel non caricata. Controlla la connessione e ricarica la pagina.',true);
-      return;
-    }
-    clearGradeImportPreview('Lettura del file Excel in corso…');
+    clearGradeImportPreview('Caricamento libreria e lettura del file Excel…');
     try {
+      await ensureXlsxLoaded();
       const workbook = XLSX.read(await file.arrayBuffer(), {type:'array', cellDates:false});
       const sheetName = workbook.SheetNames.find(n=>String(n).trim().toLocaleLowerCase('it')==='hogwarts');
       if(!sheetName) throw new Error('Nel file non è presente un foglio chiamato “Hogwarts”.');
@@ -4060,18 +4069,22 @@ if (inCastle) {
         if(localImportError && typeof localImportError.message === 'string' && (localImportError.message.startsWith('Importazione iniziale dei dati locali non riuscita') || localImportError.message.startsWith('Importazione iniziale annullata'))) throw localImportError;
       }
     }
-    // Caricamento in blocco: 3 richieste complessive (classi, studenti, storico),
-    // invece di una richiesta per ogni classe e per ogni studente.
+    // Le letture indipendenti (elenchi studenti e sessioni) partono insieme:
+    // evitiamo un round-trip sequenziale senza cambiare le policy o i dati letti.
     const classRows = remoteClasses || [];
     const classIds = classRows.map(c => c.id);
     let studentRows = [];
+    let sessionRows = [];
     if(classIds.length){
-      const rosterResults=await Promise.all(classIds.map(classId=>supabase.rpc('get_teacher_class_roster',{p_class_id:classId})));
+      const [rosterResults, sessionResult] = await Promise.all([
+        Promise.all(classIds.map(classId=>supabase.rpc('get_teacher_class_roster',{p_class_id:classId}))),
+        supabase.from('assessment_sessions').select('id,class_id,test_name,test_date,published_at').in('class_id',classIds)
+      ]);
       for(const result of rosterResults){if(result.error) throw result.error;studentRows.push(...(result.data||[]));}
+      if(sessionResult.error) throw sessionResult.error;
+      sessionRows = sessionResult.data || [];
     }
     const studentIds = studentRows.map(s => s.id);
-    let sessionRows=[];
-    if(classIds.length){const {data,error}=await supabase.from('assessment_sessions').select('id,class_id,test_name,test_date,published_at').in('class_id',classIds);if(error)throw error;sessionRows=data||[];}
     const sessionsById=new Map(sessionRows.map(a=>[String(a.id),a]));
     let gradeRows = [];
     if(studentIds.length){
@@ -4112,16 +4125,8 @@ if (inCastle) {
     if(!state.classes.length){ state.className = 'Castello'; state.students = []; state.activeClassId = null; }
     lastSyncedClasses = JSON.parse(JSON.stringify(state.classes));
     saveLocalOnly();
-    // Carica l'Albo d'oro al login, così lo stato del pulsante nella singola
-    // classe riflette le registrazioni persistenti anche dopo aver riaperto la pagina.
-    // Un errore dell'archivio non deve impedire l'accesso alla modalità docente.
-    try {
-      await loadHouseCupArchive();
-    } catch(archiveLoadError) {
-      console.error('Impossibile verificare l’Albo d’oro al login:', archiveLoadError);
-      houseCupArchiveLoaded = false;
-    }
-    await refreshAssessmentSessions(true);
+    // L’interfaccia principale non aspetta dati secondari: l’Albo d’oro viene
+    // caricato solo quando viene aperto; le verifiche si caricano entrando nella classe.
     render();
   }
   function saveLocalOnly(){
