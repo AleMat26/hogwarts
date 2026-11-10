@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Hogwarts — Il Torneo delle Quattro Casate</title>
+<title>Hogwarts — Il Torneo delle Quattro Case</title>
 <style>
 :root {
   color-scheme: dark;
@@ -380,7 +380,7 @@ main {
   text-align:center;
 }
 
-/* Riepilogo delle Casate: spazi più compatti */
+/* Riepilogo delle Case: spazi più compatti */
 .sorting-ceremony.review-houses .ceremony-title {
   margin:2px 0 16px;
 }
@@ -728,7 +728,7 @@ header .title::after {
   opacity: .75;
   font-size: 13px;
 }
-/* Le quattro Casate: tinta propria, riflesso tenue e interazione morbida */
+/* Le quattro Case: tinta propria, riflesso tenue e interazione morbida */
 .house {
   border-color: color-mix(in srgb, currentColor 24%, transparent);
   background:
@@ -986,7 +986,7 @@ input, select, .authbox input {
 .house-cup-record-score { display:flex; justify-content:space-between; align-items:center; gap:7px; min-width:0; box-sizing:border-box; border-radius:7px; padding:7px 8px; background:rgba(255,255,255,.045); font:12px system-ui,sans-serif; }
 .house-cup-record-score span { display:block; min-width:0; white-space:nowrap; font:12px system-ui,sans-serif; }
 .house-cup-record-score strong { display:block; flex:0 0 auto; margin:0; color:#fff; font:12px system-ui,sans-serif; line-height:normal; white-space:nowrap; }
-/* Colori di sfondo espliciti per ogni Casata nell'Albo d'oro.
+/* Colori di sfondo espliciti per ogni Casa nell'Albo d'oro.
    !important evita che gli stili generici delle card sovrascrivano i colori. */
 #houseCupArchivePanel .house-cup-record-score.house-score-g { background: rgba(164,43,53,.24) !important; border: 1px solid rgba(190,70,78,.42); }
 #houseCupArchivePanel .house-cup-record-score.house-score-t { background: rgba(202,159,48,.23) !important; border: 1px solid rgba(218,181,75,.42); }
@@ -1119,7 +1119,7 @@ input, select, .authbox input {
 .student-profile-houses .student-house-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
 .student-profile-houses .student-house-card { cursor:pointer; min-width:0; }
 .student-profile-houses .student-house-card:focus-visible { outline:2px solid var(--gold); outline-offset:3px; }
-/* La selezione serve solo a gestire il pannello: non deve evidenziare la Casata cliccata. Il bordo dorato è riservato esclusivamente alla Casata in testa. */
+/* La selezione serve solo a gestire il pannello: non deve evidenziare la Casa cliccata. Il bordo dorato è riservato esclusivamente alla Casa in testa. */
 .student-profile-houses .student-house-card.selected { box-shadow:none; border-color:color-mix(in srgb, currentColor 24%, transparent); }
 .student-profile-house-summary { display:none; margin-top:16px; padding:18px; border:1px solid var(--line); border-radius:14px; background:#12151e; }
 .student-profile-house-members { display:none; margin-top:14px; padding:16px; border:1px solid var(--line); border-radius:14px; background:#12151e; }
@@ -1207,10 +1207,10 @@ input, select, .authbox input {
 <header>
   <div class="crest"><div class="shield"><div class="crestmark">⚡</div></div></div>
   <h1 class="title">Hogwarts</h1>
-  <p class="subtitle">Il Torneo delle Quattro Casate</p>
+  <p class="subtitle">Il Torneo delle Quattro Case</p>
 </header>
 <main>
-  <p class="intro" style="text-indent:1.5em">Benvenuti nella Sala Grande.<br>Le Casate conquistano punti e portano la propria squadra in cima alla classifica.</p>
+  <p class="intro" style="text-indent:1.5em">Benvenuti nella Sala Grande.<br>Le Case conquistano punti e portano la propria squadra in cima alla classifica.</p>
   
   <!-- SCELTA PUBBLICA DELLA CLASSE: indipendente dalla classe gestita dal docente -->
   <div class="public-home-top" id="publicHomeTop">
@@ -1260,7 +1260,7 @@ input, select, .authbox input {
       <button type="button" class="btn" id="newClassBtn">＋ Nuova classe</button>
       <button type="button" class="btn primary" id="promoteClassBtn">🎓 Promuovi alla classe successiva</button>
     </div>
-    <p class="class-manager-note">Ogni classe ha studenti, Casate, punteggi e storico indipendenti. Promuovendo una classe, gli studenti conservano la Casata; la nuova Coppa riparte da zero e la classe precedente resta consultabile in archivio.</p>
+    <p class="class-manager-note">Ogni classe ha studenti, Case, punteggi e storico indipendenti. Promuovendo una classe, gli studenti conservano la Casa; la nuova Coppa riparte da zero e la classe precedente resta consultabile in archivio.</p>
   </section>
 
   <!-- ALBO D'ORO: archivio indipendente delle Coppe concluse -->
@@ -1291,7 +1291,7 @@ input, select, .authbox input {
   <div class="controls teacher-controls" id="teacherControls" style="display:none">
     <div class="controls-row">
       <button type="button" class="btn primary" id="sortBtn">🎩 Cappello Parlante</button>
-      <button type="button" class="btn" id="reviewHousesBtn">📜 Le quattro Casate</button>
+      <button type="button" class="btn" id="reviewHousesBtn">📜 Le quattro Case</button>
       <button type="button" class="btn" id="houseCupArchiveBtn">🏆 Albo d’oro</button>
       <button type="button" class="btn" id="castleViewBtn">🏰 Visualizza Castello</button>
       <button type="button" class="btn" id="logoutBtn">🚪 Esci</button>
@@ -1311,7 +1311,7 @@ input, select, .authbox input {
       <div><h2 class="student-profile-name" id="studentProfileName">Studente</h2><div class="student-profile-meta" id="studentProfileMeta"></div></div>
       <div class="student-profile-house"><span id="studentProfileSigil">✦</span><strong id="studentProfileHousePoints">0 pt</strong></div>
     </div>
-    <section class="student-profile-houses" id="studentProfileHouses" aria-label="Le quattro Casate">
+    <section class="student-profile-houses" id="studentProfileHouses" aria-label="Le quattro Case">
       <div class="student-house-grid">
         <article class="house g clickable student-house-card" data-student-house-card="g" role="button" tabindex="0" aria-label="Visualizza gli studenti di Grifondoro"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-student-house-points="g">0 punti</div></article>
         <article class="house t clickable student-house-card" data-student-house-card="t" role="button" tabindex="0" aria-label="Visualizza gli studenti di Tassorosso"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-student-house-points="t">0 punti</div></article>
@@ -1319,7 +1319,7 @@ input, select, .authbox input {
         <article class="house s clickable student-house-card" data-student-house-card="s" role="button" tabindex="0" aria-label="Visualizza gli studenti di Serpeverde"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-student-house-points="s">0 punti</div></article>
       </div>
       <section class="card student-profile-house-members" id="studentProfileHouseMembers" aria-live="polite" style="display:none">
-        <h3 id="studentProfileHouseMembersTitle">Studenti della Casata</h3>
+        <h3 id="studentProfileHouseMembersTitle">Studenti della Casa</h3>
         <div id="studentProfileHouseMembersList" class="list"></div>
       </section>
 
@@ -1337,16 +1337,16 @@ input, select, .authbox input {
       <div class="student-account-status" id="studentPasswordMessage"></div>
     </section>
     <div class="student-profile-actions">
-      <button type="button" class="btn" id="studentProfileHousesBtn">🏰 Le quattro Casate</button>
+      <button type="button" class="btn" id="studentProfileHousesBtn">🏰 Le quattro Case</button>
       <button type="button" class="btn" id="studentProfileGradesBtn">📚 Storico voti</button>
       <button type="button" class="btn" id="studentProfileStickersBtn">✨ Collezione sticker</button>
     </div>
     <div class="student-profile-panel" id="studentProfileGrades"><div id="studentProfileGradesContent"></div></div>
     <div class="student-profile-panel" id="studentProfileStickers"><div id="studentProfileStickersContent">Caricamento della collezione…</div></div>
   </section>
-  <!-- Le Casate e la Coppa sono già visibili: non serve un menu duplicato. -->
+  <!-- Le Case e la Coppa sono già visibili: non serve un menu duplicato. -->
 
-  <!-- LE CASATE -->
+  <!-- LE Case -->
   <section class="grid" id="houses">
     <article class="house g" data-house-card="g"><div class="sigil">🦁</div><h2>Grifondoro</h2><p>Coraggio, audacia e spirito d'iniziativa.</p><div class="points" data-house="g">0 punti</div></article>
     <article class="house t" data-house-card="t"><div class="sigil">🦡</div><h2>Tassorosso</h2><p>Lealtà, pazienza e lavoro di squadra.</p><div class="points" data-house="t">0 punti</div></article>
@@ -1354,17 +1354,17 @@ input, select, .authbox input {
     <article class="house s" data-house-card="s"><div class="sigil">🐍</div><h2>Serpeverde</h2><p>Ambizione, determinazione e astuzia.</p><div class="points" data-house="s">0 punti</div></article>
   </section>
 
-  <!-- ELENCO STUDENTI DELLA CASATA (SOLO DOCENTE) -->
+  <!-- ELENCO STUDENTI DELLA Casa (SOLO DOCENTE) -->
   <section class="card" id="houseStudentsPanel" style="display:none" aria-live="polite">
-    <h3 id="houseStudentsTitle">Studenti della Casata</h3>
-    <input id="houseSearch" class="house-search" type="search" placeholder="Cerca uno studente in questa Casata…" aria-label="Cerca studente nella Casata">
+    <h3 id="houseStudentsTitle">Studenti della Casa</h3>
+    <input id="houseSearch" class="house-search" type="search" placeholder="Cerca uno studente in questa Casa…" aria-label="Cerca studente nella Casa">
     <div id="houseStudentsList" class="list"></div>
   </section>
 
   <!-- CLASSIFICA -->
   <section class="card" id="ranking">
     <h3>🏆 Coppa delle Case</h3>
-    <p id="rankingLead" style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La Coppa si accende quando le Casate iniziano a conquistare punti.</p>
+    <p id="rankingLead" style="margin:0 0 14px;color:var(--muted);font-family:system-ui,sans-serif">La Coppa si accende quando le Case iniziano a conquistare punti.</p>
     <div id="rankingList" class="list"></div>
   </section>
 
@@ -1383,7 +1383,7 @@ input, select, .authbox input {
     <div id="castleClassGrid" class="castle-class-grid"></div>
   </section>
 
-  <!-- GESTIONE OPERATIVA: sotto le Casate e la Coppa delle Case -->
+  <!-- GESTIONE OPERATIVA: sotto le Case e la Coppa delle Case -->
   <div class="controls teacher-controls" id="teacherWorkControls" style="display:none">
     <div class="controls-row">
       <button type="button" class="btn" id="manageBtn">👥 Gestisci studenti</button>
@@ -1455,8 +1455,8 @@ input, select, .authbox input {
     </div>
     <div class="student-tools">
       <input id="studentSearch" type="search" placeholder="Cerca per nome…" aria-label="Cerca studente">
-      <select id="houseFilter" aria-label="Filtra per Casata">
-        <option value="all">Tutte le Casate</option>
+      <select id="houseFilter" aria-label="Filtra per Casa">
+        <option value="all">Tutte le Case</option>
         <option value="g">Grifondoro</option><option value="t">Tassorosso</option>
         <option value="r">Corvonero</option><option value="s">Serpeverde</option>
         <option value="unassigned">Da smistare</option>
@@ -1725,7 +1725,7 @@ input, select, .authbox input {
       return { classes, activeClassId: active.id, nextClassId: Number(raw.nextClassId) || classes.length + 1,
         className: active.name, schoolYear: active.schoolYear, students: active.students, nextId: active.nextId };
     }
-    // Migrazione automatica del vecchio formato: conserva tutti gli studenti, le Casate e i punti esistenti.
+    // Migrazione automatica del vecchio formato: conserva tutti gli studenti, le Case e i punti esistenti.
     const students = normalizeStudents(raw && raw.students);
     const nextId = Number(raw && raw.nextId) || Math.max(0, ...students.map(st => Number(st.id) || 0)) + 1;
     const legacyClass = { id: 'class-1', name: (raw && raw.className) || 'II H', schoolYear: (raw && raw.schoolYear) || DEFAULT_YEAR, students, nextId, archived: false, resetForDeletion: false };
@@ -2013,7 +2013,7 @@ input, select, .authbox input {
       const items = result.warnings.concat(invalid.map(r=>`${r.name} (${r.studentId}): ${r.detail}`), noGrade.map(r=>`${r.name} (${r.studentId}): ${r.detail || 'nessun voto individuato; nessuna modifica'}`));
       html += '<div class="grade-import-note"><strong>Controlli e avvisi</strong><ul>' + items.map(x=>`<li>${esc(x)}</li>`).join('') + '</ul></div>';
     }
-    html += '<table class="grade-import-table"><thead><tr><th>Studente</th><th>ID database</th><th>Voto Excel</th><th>Punti</th><th>Casata</th><th>Esito</th></tr></thead><tbody>';
+    html += '<table class="grade-import-table"><thead><tr><th>Studente</th><th>ID database</th><th>Voto Excel</th><th>Punti</th><th>Casa</th><th>Esito</th></tr></thead><tbody>';
     html += result.rows.map(r=>{
       const status = r.kind==='invalid' ? 'Voto non valido' : r.kind==='notfound' ? 'Nessuna modifica' :
         r.action==='add' && r.kind==='grade' ? 'Nuovo voto' :
@@ -2381,7 +2381,7 @@ input, select, .authbox input {
   }
 
   // Segna la Coppa come da aggiornare ogni volta che cambia il punteggio di
-  // una Casata. Il confronto dei totali resta utile anche dopo un ricaricamento.
+  // una Casa. Il confronto dei totali resta utile anche dopo un ricaricamento.
   const houseCupDirtyKeys = new Set();
   const houseCupLastAction = new Map();
   function houseCupKey(c){
@@ -2448,7 +2448,7 @@ input, select, .authbox input {
     recordBtn.disabled = houseCupArchiveBusy || !houseCupArchiveLoaded || !canRecord || Boolean(existingMatchesCurrent && !cupWasChanged);
     recordBtn.textContent = existing && (!existingMatchesCurrent || cupWasChanged) ? '↻ Aggiorna la Coppa della classe selezionata' : '＋ Registra la Coppa della classe selezionata';
     recordBtn.title = existingMatchesCurrent && !cupWasChanged ? 'La Coppa è già registrata e i punteggi coincidono con quelli attuali.'
-      : existing ? 'Il punteggio di una Casata è stato modificato: puoi aggiornare la Coppa già registrata.'
+      : existing ? 'Il punteggio di una Casa è stato modificato: puoi aggiornare la Coppa già registrata.'
       : !houseCupArchiveLoaded ? 'Attendi il caricamento dell’Albo d’oro.'
       : !c ? 'Seleziona una classe prima di registrare la Coppa.'
       : c.resetForDeletion ? 'La classe è già stata azzerata.'
@@ -2727,7 +2727,7 @@ input, select, .authbox input {
     const count = houseCupArchiveRecords.length;
     if(!confirm(`ATTENZIONE: stai per cancellare tutte le ${count} registrazioni dell’Albo d’oro, in modo permanente.
 
-Saranno eliminati soltanto i record della tabella house_cup_archive. Le classi, gli studenti, le Casate e i punteggi resteranno invariati.
+Saranno eliminati soltanto i record della tabella house_cup_archive. Le classi, gli studenti, le Case e i punteggi resteranno invariati.
 
 Vuoi procedere?`)) return;
     houseCupArchiveBusy = true;
@@ -2791,7 +2791,7 @@ Vuoi procedere?`)) return;
     $('promoteClassBtn').textContent = finalYear ? '🏁 Concludi percorso' : '🎓 Promuovi alla classe successiva';
     $('promoteClassBtn').style.display = canPromoteClass ? 'inline-block' : 'none';
     $('promoteClassBtn').disabled = !canPromoteClass;
-    $('promoteClassBtn').title = !c ? 'Crea prima una classe.' : activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Casate.';
+    $('promoteClassBtn').title = !c ? 'Crea prima una classe.' : activeIsArchived() ? 'La classe archiviata è in sola consultazione.' : finalYear ? 'Conclude il percorso e archivia la classe quinta.' : 'Crea la classe dell’anno successivo conservando le Case.';
     const deleteArchivedBtn = $('deleteArchivedClassBtn');
     if(deleteArchivedBtn) deleteArchivedBtn.onclick = deleteArchivedClass;
     const deleteAllResetClassesBtn = $('deleteAllResetClassesBtn');
@@ -2891,7 +2891,7 @@ if (inCastle) {
     $('rankingLead').textContent = !displayedStudents.length && !state.classes.some(c => !c.archived)
       ? 'Non ci sono classi attive da visualizzare.'
       : lead[1] === 0
-        ? (showingAggregate ? 'Il Castello si anima quando le Casate iniziano a conquistare punti.' : 'La Coppa di ' + (displayedClass ? displayedClass.name : 'questa classe') + ' si accende quando le Casate iniziano a conquistare punti.')
+        ? (showingAggregate ? 'Il Castello si anima quando le Case iniziano a conquistare punti.' : 'La Coppa di ' + (displayedClass ? displayedClass.name : 'questa classe') + ' si accende quando le Case iniziano a conquistare punti.')
         : leaders.length > 1 ? 'Parità in testa: ' + leaders.map(([k]) => houses[k]).join(' e ') + '!'
         : 'In testa: ' + houses[lead[0]] + ' · ' + pointLabel(lead[1]);
     $('ranking').querySelector('h3').textContent = '🏆 Coppa delle Case' + (showingAggregate ? ' · Castello' : displayedClass ? ' · ' + displayedClass.name : '');
@@ -3010,7 +3010,7 @@ if (inCastle) {
       $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + ' · Castello';
       $('houseStudentsList').innerHTML = members.map(st =>
         `<div class="house-student-line house-student-clickable" role="button" tabindex="0" data-house-student="${esc(st.id)}" data-house-class="${esc(st.classId)}" aria-label="Apri il profilo di ${esc(st.name)} nella classe ${esc(st.className)}"><b>${esc(st.name)}</b><span>${esc(st.className)}</span></div>`
-      ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata nelle classi attive.'}</div>`;
+      ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casa nelle classi attive.'}</div>`;
     } else {
       const shownClass = activeClass();
       const shownStudents = shownClass ? shownClass.students : [];
@@ -3019,7 +3019,7 @@ if (inCastle) {
       $('houseStudentsTitle').textContent = 'Studenti di ' + houses[selectedHouse] + (shownClass ? ' · ' + shownClass.name : '');
       $('houseStudentsList').innerHTML = members.map(st =>
         `<div class="house-student-line house-student-clickable" role="button" tabindex="0" data-house-student="${esc(st.id)}" data-house-class="${esc(shownClass ? shownClass.id : '')}" aria-label="Apri il profilo di ${esc(st.name)}"><b>${esc(st.name)}</b><span>${pointLabel(st.points || 0)}</span></div>`
-      ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casata.'}</div>`;
+      ).join('') || `<div class="house-students-empty">${query ? 'Nessuno studente corrisponde alla ricerca.' : 'Nessuno studente assegnato a questa Casa.'}</div>`;
     }
     $('houseStudentsPanel').style.display = 'block';
   }
@@ -3115,7 +3115,7 @@ if (inCastle) {
     const readOnly = activeIsArchived();
     $('sortBtn').disabled = (role === 'teacher' && teacherView === 'castle') || readOnly || !state.students.length || state.students.every(st => st.house);
     $('reviewHousesBtn').style.display = role === 'teacher' && teacherView === 'class' ? 'inline-block' : 'none';
-    // La consultazione delle Casate resta disponibile anche per le classi archiviate.
+    // La consultazione delle Case resta disponibile anche per le classi archiviate.
     $('reviewHousesBtn').disabled = !state.students.length;
     $('studentName').disabled = readOnly;
     $('addStudent').disabled = readOnly;
@@ -3225,12 +3225,12 @@ if (inCastle) {
     const members=studentHouseRosterReady
       ? studentHouseRoster.filter(st=>st.house===houseKey).slice().sort((a,b)=>a.name.localeCompare(b.name,'it'))
       : [];
-    const label=houses[houseKey] || 'Casata';
+    const label=houses[houseKey] || 'Casa';
     $('studentProfileHouseMembersTitle').textContent = 'Studenti di ' + label + ' · ' + (activeClass()?.name || 'Classe');
     $('studentProfileHouseMembersList').innerHTML = !studentHouseRosterReady
       ? `<div class="house-students-empty">${esc(studentHouseRosterError || 'Caricamento degli studenti della classe…')}</div>`
       : members.map(st=>`<div class="house-student-line"><b>${esc(st.name)}</b>${studentAccountMode ? '' : `<span>${pointLabel(st.points||0)}</span>`}</div>`).join('')
-        || '<div class="house-students-empty">Nessuno studente assegnato a questa Casata.</div>';
+        || '<div class="house-students-empty">Nessuno studente assegnato a questa Casa.</div>';
     panel.style.display='block';
     $('studentProfileGrades').classList.remove('active');
     $('studentProfileStickers').classList.remove('active');
@@ -3241,7 +3241,7 @@ if (inCastle) {
 
   function openStudentProfileHouseSummary(){
     showStudentProfilePanel(null);
-    $('modalTitle').textContent = 'Le quattro Casate';
+    $('modalTitle').textContent = 'Le quattro Case';
     $('result').innerHTML = studentHouseRosterReady
       ? buildHouseCompositionMarkup(studentHouseRoster, activeClass()?.name || '')
       : `<div class="sorting-ceremony"><p class="ceremony-intro">${esc(studentHouseRosterError || 'Caricamento degli studenti della classe…')}</p></div>`;
@@ -3282,7 +3282,7 @@ if (inCastle) {
     $('assessmentSessionsCard').style.display = 'none';
     $('studentProfileView').classList.add('active');
     $('studentProfileName').textContent = student.name;
-    $('studentProfileMeta').textContent = `${cls.name} · ${cls.schoolYear || 'anno non indicato'} · ${student.house ? houses[student.house] : 'Casata non assegnata'} · Totale punti ${formatPoints(student.points || 0)}`;
+    $('studentProfileMeta').textContent = `${cls.name} · ${cls.schoolYear || 'anno non indicato'} · ${student.house ? houses[student.house] : 'Casa non assegnata'} · Totale punti ${formatPoints(student.points || 0)}`;
     const totalsNow = totals(state.students);
     $('studentProfileSigil').textContent = houseSigils[student.house] || '🎩';
     const profileHouseTotal = student.house ? (studentAccountMode ? studentHouseTotals[student.house] : totalsNow[student.house]) : 0;
@@ -3324,7 +3324,7 @@ if (inCastle) {
       target.innerHTML='<div class="student-sticker-grid">'+rows.map(r=>{
         const path=pathById.get(String(r.sticker_id));const url=path&&urlByPath.get(path);const title=String(r.test_name||'Prova senza nome');
         const points=Number(r.student_points);const total=Number(r.house_total);
-        return `<article class="student-sticker" tabindex="0" role="button" aria-label="Gira lo sticker della prova ${esc(title)}"><div class="student-sticker-inner"><div class="student-sticker-face">${url?`<img src="${esc(url)}" alt="Sticker assegnato per ${esc(title)}">`:'Sticker non disponibile'}</div><div class="student-sticker-face student-sticker-back"><strong>${esc(title)}</strong><span>${profileDate(r.test_date||r.assigned_at)}</span><span>Voto: ${r.grade!=null&&r.grade!==''&&Number.isFinite(Number(String(r.grade).replace(',','.')))?formatDisplayNumber(r.grade):'—'}</span><span>Punti guadagnati: ${Number.isFinite(points)?(points>0?'+':'')+formatPoints(points):'—'}</span><span>Totale casata: ${Number.isFinite(total)?formatPoints(total):'—'} pt</span></div></div></article>`;
+        return `<article class="student-sticker" tabindex="0" role="button" aria-label="Gira lo sticker della prova ${esc(title)}"><div class="student-sticker-inner"><div class="student-sticker-face">${url?`<img src="${esc(url)}" alt="Sticker assegnato per ${esc(title)}">`:'Sticker non disponibile'}</div><div class="student-sticker-face student-sticker-back"><strong>${esc(title)}</strong><span>${profileDate(r.test_date||r.assigned_at)}</span><span>Voto: ${r.grade!=null&&r.grade!==''&&Number.isFinite(Number(String(r.grade).replace(',','.')))?formatDisplayNumber(r.grade):'—'}</span><span>Punti guadagnati: ${Number.isFinite(points)?(points>0?'+':'')+formatPoints(points):'—'}</span><span>Totale casa: ${Number.isFinite(total)?formatPoints(total):'—'} pt</span></div></div></article>`;
       }).join('')+'</div>';
       target.querySelectorAll('.student-sticker').forEach(card=>{const flip=()=>card.classList.toggle('flipped');card.addEventListener('click',flip);card.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();flip();}});});
     }catch(error){console.warn('Lettura fascicolo sticker non riuscita:',error);target.textContent='Non riesco ancora a leggere gli sticker. Verifica che il progetto Supabase contenga le tabelle sticker_assignment_history e sticker_archive e il bucket archivio-sticker. Dettaglio: '+(error.message||'errore sconosciuto');}
@@ -3368,7 +3368,7 @@ if (inCastle) {
     window.scrollTo({top:profilePreviousClassScroll,behavior:'smooth'});
   }
   // Come nella modalità docente, un clic sullo sfondo chiude il pannello aperto.
-  // I clic sui pulsanti, sulle quattro Casate o dentro il pannello non lo chiudono.
+  // I clic sui pulsanti, sulle quattro Case o dentro il pannello non lo chiudono.
   document.addEventListener('click', e => {
     if(!$('studentProfileView').classList.contains('active')) return;
     const housePanel = $('studentProfileHouseMembers');
@@ -3679,7 +3679,7 @@ if (inCastle) {
     $('manageBtn').classList.remove('primary');
     $('pointsBtn').classList.remove('primary');
 
-    // Chiudi anche l'eventuale pannello della Casata aperto nella classe.
+    // Chiudi anche l'eventuale pannello della Casa aperto nella classe.
     selectedHouse = null;
     $('houseSearch').value = '';
     $('houseStudentsPanel').style.display = 'none';
@@ -3766,13 +3766,13 @@ if (inCastle) {
     openStudentPoints(studentId);
   });
 
-  // Le schede delle Casate mostrano l'elenco soltanto in modalità docente.
+  // Le schede delle Case mostrano l'elenco soltanto in modalità docente.
   document.querySelectorAll('#houses [data-house-card]').forEach(card => {
     const openHouse = () => {
       if(role !== 'teacher' || (!['class','castle'].includes(teacherView) && !activeIsArchived())) return;
       const key = card.dataset.houseCard;
       selectedHouse = selectedHouse === key ? null : key;
-      // Aprire l'elenco della Casata chiude sempre i pannelli operativi.
+      // Aprire l'elenco della Casa chiude sempre i pannelli operativi.
       $('classCard').style.display = 'none';
       $('pointsCard').style.display = 'none';
       $('manageBtn').classList.remove('primary');
@@ -4509,7 +4509,7 @@ if (inCastle) {
   function deleteArchivedClass(){
     const target = activeClass();
     if(!target || !(target.archived || target.resetForDeletion)){ showToast('Puoi eliminare soltanto una classe archiviata o una classe già azzerata.'); return; }
-    const confirmation = 'Vuoi eliminare definitivamente ' + target.name + ' · ' + target.schoolYear + '?\n\nSaranno cancellati da questo browser la classe, gli studenti, le Casate, i punteggi e lo storico associato. L’operazione non si può annullare. Esporta prima un backup JSON se vuoi conservarne una copia.';
+    const confirmation = 'Vuoi eliminare definitivamente ' + target.name + ' · ' + target.schoolYear + '?\n\nSaranno cancellati da questo browser la classe, gli studenti, le Case, i punteggi e lo storico associato. L’operazione non si può annullare. Esporta prima un backup JSON se vuoi conservarne una copia.';
     if(!confirm(confirmation)) return;
     const deletedName = target.name + ' · ' + target.schoolYear;
     state.classes = state.classes.filter(c => c.id !== target.id);
@@ -4740,9 +4740,9 @@ $('promoteClassBtn').onclick = async () => {
     if(activeIsArchived()){ alert('Seleziona una classe attiva da promuovere.'); return; }
     const current = activeClass();
     if(isFinalYearClass(current.name)){
-      const confirmation = 'Vuoi concludere il percorso della classe ' + current.name + ' · ' + current.schoolYear + '?\n\nLa classe sarà archiviata in sola consultazione. Studenti, Casate, punteggi e storico saranno conservati nell’archivio. Non verrà creata una classe successiva.';
+      const confirmation = 'Vuoi concludere il percorso della classe ' + current.name + ' · ' + current.schoolYear + '?\n\nLa classe sarà archiviata in sola consultazione. Studenti, Case, punteggi e storico saranno conservati nell’archivio. Non verrà creata una classe successiva.';
       if(!confirm(confirmation)) return;
-      const registerCup = confirm('Vuoi registrare anche la Coppa finale di ' + current.name + ' · ' + current.schoolYear + ' nell’Albo d’oro?\n\nLa registrazione conserverà i punteggi finali delle quattro Casate.');
+      const registerCup = confirm('Vuoi registrare anche la Coppa finale di ' + current.name + ' · ' + current.schoolYear + ' nell’Albo d’oro?\n\nLa registrazione conserverà i punteggi finali delle quattro Case.');
       const cupRegistered = registerCup ? await recordHouseCup({ skipConfirmation: true, fromArchiving: true }) : false;
       current.archived = true;
       if(publicClassId === current.id) {
@@ -4773,8 +4773,8 @@ $('promoteClassBtn').onclick = async () => {
     if(state.classes.some(c => normalizeClassName(c.name) === normalizeClassName(cleanName) && normalizeSchoolYear(c.schoolYear) === normalizeSchoolYear(cleanYear))){
       alert('Esiste già una classe con questo nome nello stesso anno scolastico.'); return;
     }
-    if(!confirm('Creare ' + cleanName + ' · ' + cleanYear + ' copiando i nomi e le Casate di ' + current.name + '? I punteggi e gli storici del nuovo anno partiranno da zero. La classe attuale resterà nell’archivio e non sarà modificabile.')) return;
-    const registerCup = confirm('Vuoi registrare anche la Coppa finale di ' + current.name + ' · ' + current.schoolYear + ' nell’Albo d’oro?\n\nLa registrazione conserverà i punteggi finali delle quattro Casate.');
+    if(!confirm('Creare ' + cleanName + ' · ' + cleanYear + ' copiando i nomi e le Case di ' + current.name + '? I punteggi e gli storici del nuovo anno partiranno da zero. La classe attuale resterà nell’archivio e non sarà modificabile.')) return;
+    const registerCup = confirm('Vuoi registrare anche la Coppa finale di ' + current.name + ' · ' + current.schoolYear + ' nell’Albo d’oro?\n\nLa registrazione conserverà i punteggi finali delle quattro Case.');
     const cupRegistered = registerCup ? await recordHouseCup({ skipConfirmation: true, fromArchiving: true }) : false;
     save();
     current.archived = true;
@@ -4788,7 +4788,7 @@ $('promoteClassBtn').onclick = async () => {
     const id = nextUniqueClassId();
     state.classes.push({ id, clientId: id, name: cleanName, schoolYear: cleanYear, students: promotedStudents, nextId: promotedStudents.length + 1, archived: false, resetForDeletion: false });
     switchClass(id);
-    if(!registerCup || cupRegistered) showToast('Nuovo anno creato: Casate conservate, punteggi azzerati.' + (cupRegistered ? ' Coppa della classe precedente salvata nell’Albo d’oro.' : ''));
+    if(!registerCup || cupRegistered) showToast('Nuovo anno creato: Case conservate, punteggi azzerati.' + (cupRegistered ? ' Coppa della classe precedente salvata nell’Albo d’oro.' : ''));
   };
 
   $('houseCupArchiveBtn').onclick = () => {
@@ -5052,22 +5052,22 @@ $('promoteClassBtn').onclick = async () => {
   });
   $('commendBtn').onclick = () => {
     const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
-    if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
+    if(!st){ alert('Seleziona uno studente assegnato a una Casa.'); return; }
     if(confirm('Assegnare 1 punto bonus a ' + st.name + '?')) awardCommendation(st.id);
   };
   $('malusBtn').onclick = () => {
     const st = state.students.find(x => String(x.id) === String($('pointsStudent').value));
-    if(!st){ alert('Seleziona uno studente assegnato a una Casata.'); return; }
+    if(!st){ alert('Seleziona uno studente assegnato a una Casa.'); return; }
     if(confirm('Applicare un malus di −1 punto a ' + st.name + '?')) awardMalus(st.id);
   };
 
-  // Mostra la composizione attuale delle quattro Casate senza modificare alcun dato.
+  // Mostra la composizione attuale delle quattro Case senza modificare alcun dato.
 
 $('reviewHousesBtn').onclick = () => {
     $('houseCupArchivePanel').style.display = 'none';
     // Consenti la consultazione anche in archivio: la modale è di sola lettura.
     if(role !== 'teacher' || (teacherView !== 'class' && !activeIsArchived())) return;
-    $('modalTitle').textContent = 'Le quattro Casate';
+    $('modalTitle').textContent = 'Le quattro Case';
     $('result').innerHTML = buildHouseCompositionMarkup(state.students, state.className);
     $('enterHogwarts').textContent = 'Chiudi';
     openCeremonyModalAfterScroll();
@@ -5080,12 +5080,12 @@ $('reviewHousesBtn').onclick = () => {
     if(activeIsArchived()){ showToast('Questa classe è in archivio e non può essere modificata.'); return; }
     const u = state.students.filter(s => !s.house);
     if(!u.length){
-      $('result').innerHTML = '<div class="sorting-ceremony"><p class="ceremony-intro">Tutti gli studenti sono già stati assegnati a una Casata. Il Cappello Parlante non deve effettuare altri smistamenti.</p></div>';
+      $('result').innerHTML = '<div class="sorting-ceremony"><p class="ceremony-intro">Tutti gli studenti sono già stati assegnati a una Casa. Il Cappello Parlante non deve effettuare altri smistamenti.</p></div>';
       openCeremonyModalAfterScroll();
       return;
     }
 
-    // Memorizziamo il contesto prima di assegnare le Casate: nessuno studente già smistato viene spostato.
+    // Memorizziamo il contesto prima di assegnare le Case: nessuno studente già smistato viene spostato.
     const previouslyAssigned = state.students.filter(s => !!s.house).length;
     const isSingleNewStudent = u.length === 1 && previouslyAssigned > 0;
     const newStudent = isSingleNewStudent ? u[0] : null;
@@ -5118,7 +5118,7 @@ $('reviewHousesBtn').onclick = () => {
     if(isSingleNewStudent){
       $('result').innerHTML = `<div class="sorting-ceremony"><p class="ceremony-intro">Il Cappello Parlante ha fatto la sua scelta…</p><div class="sorting-single-house">${houseCards(newStudent.house)}</div><p class="sorting-welcome">Benvenuto/a, ${esc(newStudent.name)}!</p><p class="ceremony-intro">La tua nuova casa ti aspetta.</p></div>`;
     } else {
-      $('result').innerHTML = `<div class="sorting-ceremony"><p class="ceremony-title">La cerimonia dello smistamento è compiuta</p><p class="ceremony-subtitle">Ecco le quattro Casate e gli studenti che ne fanno parte.</p><div class="sorting-houses">${k.map(houseCards).join('')}</div></div>`;
+      $('result').innerHTML = `<div class="sorting-ceremony"><p class="ceremony-title">La cerimonia dello smistamento è compiuta</p><p class="ceremony-subtitle">Ecco le quattro Case e gli studenti che ne fanno parte.</p><div class="sorting-houses">${k.map(houseCards).join('')}</div></div>`;
     }
     openCeremonyModalAfterScroll();
   };
@@ -5243,7 +5243,7 @@ $('reviewHousesBtn').onclick = () => {
       ['Studenti smistati', castleAssigned],
       ['Studenti non smistati', castleStudents - castleAssigned],
       [],
-      ['Casata','Punti totali','Studenti assegnati','Media punti per studente','Posizione']
+      ['Casa','Punti totali','Studenti assegnati','Media punti per studente','Posizione']
     ];
     const castleRanking = houseKeys.map(key => ({key, points:castleTotals[key], members:activeClasses.reduce((n,c) => n + c.students.filter(st => st.house === key).length,0)}))
       .sort((a,b) => b.points-a.points || houses[a.key].localeCompare(houses[b.key],'it'));
@@ -5255,7 +5255,7 @@ $('reviewHousesBtn').onclick = () => {
       classRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',c.students.length,assigned,c.students.length-assigned,houseKeys.reduce((n,k)=>n+t[k],0),t.g,t.t,t.r,t.s]);
     });
 
-    const studentsRows = [['Classe','Anno scolastico','Stato classe','ID studente','Nome e cognome','Casata','Punti totali','Voci nello storico']];
+    const studentsRows = [['Classe','Anno scolastico','Stato classe','ID studente','Nome e cognome','Casa','Punti totali','Voci nello storico']];
     allStudents.forEach(({c,st}) => studentsRows.push([c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',String(st.id ?? ''),st.name,st.house ? houses[st.house] : 'Da smistare',Number(st.points)||0,(st.history||[]).length]));
 
     const cupRows = [['Ambito','Classe','Anno scolastico','Stato','Grifondoro','Tassorosso','Corvonero','Serpeverde','Punti complessivi','Studenti']];
@@ -5265,7 +5265,7 @@ $('reviewHousesBtn').onclick = () => {
       cupRows.push(['Classe',c.name,c.schoolYear,c.archived ? 'Archivio' : 'Attiva',t.g,t.t,t.r,t.s,houseKeys.reduce((n,k)=>n+t[k],0),c.students.length]);
     });
 
-    const movementRows = [['Classe','Anno scolastico','Stato classe','Data','ID studente','Studente','Casata al momento dell’esportazione','Tipo movimento','Voto','Punti','Referenza','ID movimento']];
+    const movementRows = [['Classe','Anno scolastico','Stato classe','Data','ID studente','Studente','Casa al momento dell’esportazione','Tipo movimento','Voto','Punti','Referenza','ID movimento']];
     allStudents.forEach(({c,st}) => (st.history || []).forEach(h => {
       let date = h.date || (Number.isFinite(Number(h.id)) && Number(h.id) > 100000000000 ? new Date(Number(h.id)).toISOString() : '');
       let type = h.grade === 'Encomio speciale' ? 'Bonus' : h.grade === 'Malus' ? 'Malus' : 'Voto';
@@ -5310,7 +5310,7 @@ $('reviewHousesBtn').onclick = () => {
       format: 'hogwarts-torneo-backup',
       version: 3,
       exportedAt: new Date().toISOString(),
-      app: 'Hogwarts – Coppa delle Casate',
+      app: 'Hogwarts – Coppa delle Case',
       summary: {
         classes: snapshot.classes.length,
         activeClasses: snapshot.classes.filter(c => !c.archived).length,
@@ -5350,7 +5350,7 @@ $('reviewHousesBtn').onclick = () => {
     const validateStudent = (st, studentIds, studentClientIds) => {
       if(!st || typeof st !== 'object' || Array.isArray(st)) throw new Error('È presente uno studente non valido.');
       validText(st.name, 'Nome dello studente', MAX_NAME_LENGTH);
-      if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casata non riconosciuta.');
+      if(st.house != null && !['g','t','r','s'].includes(st.house)) throw new Error('È presente una Casa non riconosciuta.');
       validPoints(st.points, 'Punteggio dello studente');
       validId(st.id, 'Studente');
       validId(st.clientId, 'Identificativo client dello studente');
