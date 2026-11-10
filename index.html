@@ -3930,6 +3930,28 @@ if (inCastle) {
       showStudentProfilePanel(null);
     }
   }
+    let teacherLoginOverlay = null;
+  function showTeacherLoginLoading(){
+    if(teacherLoginOverlay) return;
+    const overlay=document.createElement('div');
+    overlay.id='teacherLoginLoading';
+    overlay.setAttribute('role','status');
+    overlay.setAttribute('aria-live','polite');
+    overlay.style.cssText='position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;padding:24px;background:rgba(8,10,16,.94);color:#f4e8c5;text-align:center;font:16px/1.5 system-ui,sans-serif;';
+    overlay.innerHTML='<div style="max-width:360px"><div style="font-size:34px;margin-bottom:14px" aria-hidden="true">🏰</div><div style="font:700 21px Georgia,serif;color:#d8b76a;margin-bottom:9px">Apertura della modalità docente</div><div>Sto caricando classi, studenti e risultati…</div><div style="margin:18px auto 0;width:30px;height:30px;border:3px solid rgba(216,183,106,.25);border-top-color:#d8b76a;border-radius:50%;animation:hogwartsTeacherSpin .8s linear infinite"></div></div>';
+    if(!document.getElementById('hogwartsTeacherSpinStyle')){
+      const style=document.createElement('style');
+      style.id='hogwartsTeacherSpinStyle';
+      style.textContent='@keyframes hogwartsTeacherSpin{to{transform:rotate(360deg)}}';
+      document.head.appendChild(style);
+    }
+    document.body.appendChild(overlay);
+    teacherLoginOverlay=overlay;
+  }
+  function hideTeacherLoginLoading(){
+    if(teacherLoginOverlay){teacherLoginOverlay.remove();teacherLoginOverlay=null;}
+  }
+
   $('loginBtn').onclick = async () => {
     if(loginBusy) return;
     if(!loginMode){ $('authMessage').textContent = 'Scegli prima Accesso docente oppure Accesso studente.'; return; }
@@ -3967,8 +3989,12 @@ if (inCastle) {
         showToast('Accesso studente effettuato.');
       } else {
         if(loginMode !== 'teacher') throw new Error('Questo account è un docente: utilizza il pulsante Accesso docente.');
+        // Copre subito la homepage pubblica: resta visibile un caricamento esplicito
+        // mentre vengono recuperati i dati, senza mostrare una schermata docente incompleta.
+        showTeacherLoginLoading();
         await loadTeacherData();
         setRole('teacher');
+        hideTeacherLoginLoading();
         showToast('Accesso docente effettuato. Dati caricati da Supabase.');
       }
     } catch(err) {
@@ -3985,6 +4011,7 @@ if (inCastle) {
       $('password').value = '';
       if(failedLogins >= 3 && !$('authMessage').textContent.startsWith('Importazione iniziale')){ $('authMessage').textContent += ' Se il problema persiste, chiedi al docente di verificare l’account.'; failedLogins = 0; }
     } finally {
+      hideTeacherLoginLoading();
       loginBusy = false; $('loginBtn').disabled = false;
       if(role !== 'teacher' && !studentAccountMode){
         $('teacherMode').disabled = false;
