@@ -3777,7 +3777,10 @@ if (inCastle) {
 
   // Le schede delle Case mostrano l'elenco soltanto in modalità docente.
   document.querySelectorAll('#houses [data-house-card]').forEach(card => {
-    const openHouse = () => {
+    const openHouse = e => {
+      // Il clic sulla Casa è un'azione esplicita: non deve arrivare ai
+      // gestori globali che chiudono i pannelli quando si clicca altrove.
+      if(e) e.stopPropagation();
       if(role !== 'teacher' || (!['class','castle'].includes(teacherView) && !activeIsArchived())) return;
       const key = card.dataset.houseCard;
       selectedHouse = selectedHouse === key ? null : key;
@@ -3786,13 +3789,14 @@ if (inCastle) {
       $('pointsCard').style.display = 'none';
       $('manageBtn').classList.remove('primary');
       $('pointsBtn').classList.remove('primary');
+      if(gradeImportOpen) closeGradeImportPanel();
       render();
     };
     card.addEventListener('click', openHouse);
     card.addEventListener('keydown', e => {
       if(e.key === 'Enter' || e.key === ' ') {
         e.preventDefault();
-        openHouse();
+        openHouse(e);
       }
     });
   });
